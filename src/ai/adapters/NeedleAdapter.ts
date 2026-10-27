@@ -40,21 +40,17 @@ export class NeedleAdapter implements AICommandAdapter {
         throw new Error('WebAssembly is not supported in this browser.');
       }
 
-      // Check if local model weights exist; if not, use official pinned Hugging Face URL
-      this.statusMessage = 'Checking Cactus Needle model weights...';
-      const hasLocalModel = await fetch('/models/needle3.cact', { method: 'HEAD' })
-        .then(r => r.ok)
-        .catch(() => false);
-
-      const modelUrl = hasLocalModel
-        ? '/models/needle3.cact'
-        : 'https://huggingface.co/Cactus-Compute/needle3/resolve/2ae11323dc000f5e70c49f7403efa6af12ba9e67/needle3.cact';
+      // Load model weights (CacheStorage -> Cloudflare chunks -> Hugging Face fallback)
+      this.statusMessage = 'Fetching Cactus Needle 3 model weights...';
+      const modelData = await this.loadModelData((msg) => {
+        this.statusMessage = msg;
+      });
 
       this.statusMessage = 'Allocating WebAssembly memory & initializing Needle 3...';
 
       // Initialize real on-device Cactus Needle session
       this.needleSession = await createNeedle({
-        model: modelUrl,
+        model: modelData,
         wasmUrl: '/models/needle.wasm',
         workerUrl: '/models/worker.js',
         modelSha256: 'c9d915eca282ed42d1a09b143b592adb4cc6744ffe2d294adf5cfc5548170c38',
@@ -319,6 +315,82 @@ export class NeedleAdapter implements AICommandAdapter {
         validationError: err?.message || 'Needle inference execution failed.',
       };
     }
+  }
+
+  private async loadModelData(updateProgress: (msg: string) => void): Promise<Uint8Array | string> {
+    const CACHE_NAME = 'cactus-needle-model-v3';
+    const MODEL_KEY = 'https://roboquest.local/models/needle3.cact';
+    const EXPECTED_SIZE = 35335380;
+
+    // 1. Try CacheStorage
+    if (typeof globalThis.caches !== 'undefined') {
+      try {
+        const cache = await globalThis.caches.open(CACHE_NAME);
+        const matched = await cache.match(MODEL_KEY);
+        if (matched) {
+          updateProgress('Loading cached Needle 3 model from device memory...');
+          const buf = await matched.arrayBuffer();
+          if (buf.byteLength === EXPECTED_SIZE) {
+            return new Uint8Array(buf);
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Try single local file if served
+    try {
+      const singleRes = await fetch('/models/needle3.cact');
+      if (singleRes.ok) {
+        updateProgress('Loading local model weights (33.6 MB)...');
+        const buf = await singleRes.arrayBuffer();
+        if (buf.byteLength === EXPECTED_SIZE) {
+          return new Uint8Array(buf);
+        }
+      }
+    } catch {}
+
+    // 3. Try chunked parts from Cloudflare CDN (/models/needle3.part1 & /models/needle3.part2)
+    try {
+      updateProgress('Fetching Needle model weights from Cloudflare CDN (Parts 1 & 2)...');
+      const [res1, res2] = await Promise.all([
+        fetch('/models/needle3.part1'),
+        fetch('/models/needle3.part2'),
+      ]);
+
+      if (res1.ok && res2.ok) {
+        updateProgress('Assembling model tensors in browser memory...');
+        const [buf1, buf2] = await Promise.all([
+          res1.arrayBuffer(),
+          res2.arrayBuffer(),
+        ]);
+
+        const total = new Uint8Array(buf1.byteLength + buf2.byteLength);
+        total.set(new Uint8Array(buf1), 0);
+        total.set(new Uint8Array(buf2), buf1.byteLength);
+
+        if (total.byteLength === EXPECTED_SIZE) {
+          // Cache into CacheStorage for instant subsequent loads
+          if (typeof globalThis.caches !== 'undefined') {
+            try {
+              const cache = await globalThis.caches.open(CACHE_NAME);
+              await cache.put(
+                MODEL_KEY,
+                new Response(total, {
+                  headers: { 'content-type': 'application/octet-stream' },
+                })
+              );
+            } catch {}
+          }
+
+          return total;
+        }
+      }
+    } catch (err) {
+      console.warn('[NeedleAdapter] Chunk fetch failed, falling back to Hugging Face CDN:', err);
+    }
+
+    // 4. Fallback to official Hugging Face URL
+    return 'https://huggingface.co/Cactus-Compute/needle3/resolve/2ae11323dc000f5e70c49f7403efa6af12ba9e67/needle3.cact';
   }
 
   async dispose(): Promise<void> {
