@@ -5,9 +5,11 @@ import { CloudAdapter } from './adapters/CloudAdapter';
 
 export class AIAdapterManager {
   private adapters: Map<string, AICommandAdapter> = new Map();
-  private activeAdapterId: string = 'rule-based-fallback';
+  private activeAdapterId: string = 'cactus-needle';
+  public fallbackEnabled: boolean = false; // Rule-based fallback disabled: Model-only mode
 
   constructor() {
+    // Retain fallback adapter for test suites & manual debugging, but keep disabled for gameplay
     const fallback = new RuleBasedFallbackAdapter();
     const needle = new NeedleAdapter();
     const cloud = new CloudAdapter();
@@ -18,24 +20,21 @@ export class AIAdapterManager {
   }
 
   async initialize(): Promise<void> {
-    // Attempt initializing Needle first
+    // Only initialize and activate the Cactus Needle model
+    this.activeAdapterId = 'cactus-needle';
     const needle = this.adapters.get('cactus-needle');
     if (needle) {
       await needle.initialize();
-      if (needle.status === 'ready') {
-        this.activeAdapterId = 'cactus-needle';
-        return;
-      }
     }
-
-    // Default to fallback
-    const fallback = this.adapters.get('rule-based-fallback')!;
-    await fallback.initialize();
-    this.activeAdapterId = 'rule-based-fallback';
   }
 
   getActiveAdapter(): AICommandAdapter {
-    return this.adapters.get(this.activeAdapterId) || this.adapters.get('rule-based-fallback')!;
+    const adapter = this.adapters.get(this.activeAdapterId);
+    if (adapter && (adapter.id !== 'rule-based-fallback' || this.fallbackEnabled)) {
+      return adapter;
+    }
+    // Always return Cactus Needle model
+    return this.adapters.get('cactus-needle')!;
   }
 
   getAllAdapters(): AICommandAdapter[] {
@@ -43,6 +42,10 @@ export class AIAdapterManager {
   }
 
   setActiveAdapter(id: string): void {
+    if (id === 'rule-based-fallback' && !this.fallbackEnabled) {
+      console.warn('[AIAdapterManager] Rule-based fallback is disabled. Game is configured to use only the on-device AI model.');
+      return;
+    }
     if (this.adapters.has(id)) {
       this.activeAdapterId = id;
     }

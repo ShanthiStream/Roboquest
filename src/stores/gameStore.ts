@@ -125,8 +125,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   inspectorData: {
     instruction: '',
-    adapterName: 'Rule-Based Fallback Parser',
-    isFallback: true,
+    adapterName: 'Cactus Needle AI',
+    isFallback: false,
     adapterStatus: 'Active',
     generatedActions: [],
     validationStatus: 'idle',

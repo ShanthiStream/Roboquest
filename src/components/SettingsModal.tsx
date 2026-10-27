@@ -204,28 +204,30 @@ export const SettingsModal: React.FC = () => {
               <span>Inference Runtime Engine</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              <button
-                onClick={() => handleRuntimeSwitch('rule-based-fallback')}
-                className={`p-3 rounded-xl border text-left transition ${
-                  inspectorData.isFallback
-                    ? 'border-cyan-400 bg-cyan-950/40'
-                    : 'border-slate-800 bg-slate-900 hover:border-slate-700'
-                }`}
+              <div
+                className="p-3 rounded-xl border border-slate-800/60 bg-slate-900/50 text-left opacity-60 cursor-not-allowed"
+                title="Rule-Based Fallback is disabled. The game is operating in model-only mode."
               >
-                <span className="font-bold text-slate-100 block">Rule-Based Fallback</span>
-                <span className="text-[11px] text-slate-400 mt-0.5 block">100% deterministic local compiler</span>
-              </button>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-300 block">Rule-Based Fallback</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono uppercase">
+                    Disabled
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 mt-1 block">Disabled — using only on-device AI model</span>
+              </div>
 
               <button
                 onClick={() => handleRuntimeSwitch('cactus-needle')}
-                className={`p-3 rounded-xl border text-left transition ${
-                  !inspectorData.isFallback
-                    ? 'border-cyan-400 bg-cyan-950/40'
-                    : 'border-slate-800 bg-slate-900 hover:border-slate-700'
-                }`}
+                className="p-3 rounded-xl border border-cyan-400 bg-cyan-950/40 text-left transition shadow-[0_0_12px_rgba(0,240,255,0.15)]"
               >
-                <span className="font-bold text-slate-100 block">Cactus Needle AI</span>
-                <span className="text-[11px] text-slate-400 mt-0.5 block">Browser WASM tool-calling model</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-100 block">Cactus Needle AI</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono uppercase">
+                    Active Model
+                  </span>
+                </div>
+                <span className="text-[11px] text-cyan-200 mt-1 block">Browser WASM tool-calling model</span>
               </button>
             </div>
           </div>
