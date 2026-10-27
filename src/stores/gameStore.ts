@@ -1,0 +1,393 @@
+import { create } from 'zustand';
+import { aiManager } from '../ai/AIAdapterManager';
+import { RobotAction } from '../ai/types';
+import { sound } from '../audio/SoundSystem';
+import { speech } from '../audio/SpeechSystem';
+import { GameEngine } from '../game/engine/GameEngine';
+import { LEVELS } from '../game/levels/levelData';
+import { calculateLevelScore, ScoreBreakdown } from '../game/scoring/scoring';
+import { GameSnapshot, LevelDefinition, RobotCosmetics } from '../game/types';
+import { DailyChallengeService } from '../services/DailyChallengeService';
+import { storage } from '../services/StorageService';
+
+export type GameMode = 'story' | 'challenge' | 'creative' | 'daily';
+
+export interface AIInspectorData {
+  instruction: string;
+  speechTranscript?: string;
+  adapterName: string;
+  isFallback: boolean;
+  adapterStatus: string;
+  generatedActions: RobotAction[];
+  validationStatus: 'passed' | 'failed' | 'idle';
+  validationError?: string;
+  latencyMs: number;
+  explanation?: string;
+  timestamp: string;
+}
+
+export interface GameStoreState {
+  // Mode and Level
+  mode: GameMode;
+  currentLevelId: number;
+  currentLevel: LevelDefinition;
+  engine: GameEngine;
+  snapshot: GameSnapshot;
+  isExecutingCommand: boolean;
+  activeActionIndex: number;
+  totalActionSteps: number;
+
+  // AI Inspector
+  inspectorData: AIInspectorData;
+  inspectorHistory: AIInspectorData[];
+
+  // Voice System
+  isListeningVoice: boolean;
+  voiceTranscript: string;
+
+  // UI Modals
+  modalLevelSelect: boolean;
+  modalCustomizer: boolean;
+  modalAchievements: boolean;
+  modalVictory: boolean;
+  modalVictoryCard: boolean;
+  modalAIInspector: boolean;
+  modalSettings: boolean;
+  modalDailyChallenge: boolean;
+  modalHint: boolean;
+  hintStage: number; // 0, 1, 2
+
+  // Audio & Settings
+  isMuted: boolean;
+  musicVolume: number;
+  sfxVolume: number;
+  speechVolume: number;
+  highContrast: boolean;
+  reducedMotion: boolean;
+
+  // Victory result
+  lastScore: ScoreBreakdown | null;
+
+  // Profile
+  crystals: number;
+  nickname: string;
+  cosmetics: RobotCosmetics;
+
+  // Actions
+  setMode: (mode: GameMode) => void;
+  loadLevel: (levelId: number) => void;
+  loadCustomLevel: (level: LevelDefinition) => void;
+  loadDailyLevel: () => void;
+  restartLevel: () => void;
+  undoAction: () => void;
+  submitCommand: (instruction: string, isVoice?: boolean) => Promise<boolean>;
+  nextHint: () => void;
+  nextLevel: () => void;
+
+  // Voice actions
+  toggleVoiceListening: () => void;
+  setVoiceTranscript: (transcript: string) => void;
+
+  // Audio & Settings actions
+  toggleMute: () => void;
+  setMusicVolume: (v: number) => void;
+  setSfxVolume: (v: number) => void;
+  setSpeechVolume: (v: number) => void;
+  toggleHighContrast: () => void;
+  toggleReducedMotion: () => void;
+
+  // Profile actions
+  setNickname: (nick: string) => void;
+  equipCosmetics: (cosmetics: RobotCosmetics) => void;
+
+  // Modal open/close actions
+  setModal: (modal: string, open: boolean) => void;
+}
+
+const initialLevel = LEVELS[0];
+const initialEngine = new GameEngine(initialLevel);
+const initialProfile = storage.getProfile();
+
+export const useGameStore = create<GameStoreState>((set, get) => ({
+  mode: 'story',
+  currentLevelId: 1,
+  currentLevel: initialLevel,
+  engine: initialEngine,
+  snapshot: initialEngine.getSnapshot(),
+  isExecutingCommand: false,
+  activeActionIndex: 0,
+  totalActionSteps: 0,
+
+  inspectorData: {
+    instruction: '',
+    adapterName: 'Rule-Based Fallback Parser',
+    isFallback: true,
+    adapterStatus: 'Active',
+    generatedActions: [],
+    validationStatus: 'idle',
+    latencyMs: 0,
+    timestamp: new Date().toLocaleTimeString(),
+  },
+  inspectorHistory: [],
+
+  isListeningVoice: false,
+  voiceTranscript: '',
+
+  modalLevelSelect: false,
+  modalCustomizer: false,
+  modalAchievements: false,
+  modalVictory: false,
+  modalVictoryCard: false,
+  modalAIInspector: false,
+  modalSettings: false,
+  modalDailyChallenge: false,
+  modalHint: false,
+  hintStage: 0,
+
+  isMuted: false,
+  musicVolume: 0.4,
+  sfxVolume: 0.7,
+  speechVolume: 0.8,
+  highContrast: false,
+  reducedMotion: false,
+
+  lastScore: null,
+  crystals: initialProfile.crystals,
+  nickname: initialProfile.nickname,
+  cosmetics: initialProfile.equippedCosmetics,
+
+  setMode: (mode) => set({ mode }),
+
+  loadLevel: (levelId) => {
+    const level = LEVELS.find((l) => l.id === levelId) || LEVELS[0];
+    const newEngine = new GameEngine(level);
+    set({
+      mode: 'story',
+      currentLevelId: level.id,
+      currentLevel: level,
+      engine: newEngine,
+      snapshot: newEngine.getSnapshot(),
+      hintStage: 0,
+      modalVictory: false,
+      modalLevelSelect: false,
+    });
+  },
+
+  loadCustomLevel: (level) => {
+    const newEngine = new GameEngine(level);
+    set({
+      mode: 'creative',
+      currentLevelId: level.id,
+      currentLevel: level,
+      engine: newEngine,
+      snapshot: newEngine.getSnapshot(),
+      hintStage: 0,
+    });
+  },
+
+  loadDailyLevel: () => {
+    const dailyLevel = DailyChallengeService.generateDailyLevel();
+    const newEngine = new GameEngine(dailyLevel);
+    set({
+      mode: 'daily',
+      currentLevelId: 999,
+      currentLevel: dailyLevel,
+      engine: newEngine,
+      snapshot: newEngine.getSnapshot(),
+      hintStage: 0,
+      modalDailyChallenge: false,
+    });
+  },
+
+  restartLevel: () => {
+    const { engine } = get();
+    engine.reset();
+    set({
+      snapshot: engine.getSnapshot(),
+      modalVictory: false,
+      hintStage: 0,
+    });
+  },
+
+  undoAction: () => {
+    const { engine } = get();
+    if (engine.undo()) {
+      set({ snapshot: engine.getSnapshot() });
+    }
+  },
+
+  submitCommand: async (instruction: string, isVoice: boolean = false) => {
+    const { engine, currentLevel, isExecutingCommand } = get();
+    if (isExecutingCommand || engine.getSnapshot().status !== 'playing') return false;
+
+    set({ isExecutingCommand: true });
+
+    // Step 1: AI Adapter Inference
+    const context = engine.toGameContext();
+    const result = await aiManager.parseCommand(instruction, context);
+    const activeAdapter = aiManager.getActiveAdapter();
+
+    const inspectorRecord: AIInspectorData = {
+      instruction,
+      speechTranscript: isVoice ? instruction : undefined,
+      adapterName: activeAdapter.name,
+      isFallback: activeAdapter.isFallback,
+      adapterStatus: activeAdapter.status,
+      generatedActions: result.actions,
+      validationStatus: result.success ? 'passed' : 'failed',
+      validationError: result.validationError,
+      latencyMs: result.latencyMs,
+      explanation: result.explanation,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+
+    set((state) => ({
+      inspectorData: inspectorRecord,
+      inspectorHistory: [inspectorRecord, ...state.inspectorHistory.slice(0, 20)],
+    }));
+
+    if (!result.success || result.actions.length === 0) {
+      speech.speak("I couldn't process that instruction. Please try again.");
+      set({ isExecutingCommand: false });
+      return false;
+    }
+
+    // Step 2: Execute in GameEngine
+    const executionSuccess = await engine.executeActions(
+      result.actions,
+      {
+        onStepStart: (_act, idx, total) => {
+          set({ activeActionIndex: idx, totalActionSteps: total });
+        },
+        onStepComplete: (_act, snap) => {
+          set({ snapshot: snap });
+        },
+        onLevelComplete: (snap) => {
+          const score = calculateLevelScore(
+            currentLevel,
+            snap.stepsTaken,
+            snap.commandsUsed,
+            snap.robot.energy
+          );
+
+          storage.recordLevelComplete(
+            currentLevel.id,
+            score.stars,
+            score.totalScore,
+            snap.stepsTaken,
+            snap.commandsUsed
+          );
+
+          // Check achievements
+          if (currentLevel.id === 1) storage.unlockAchievement('first-steps');
+          if (currentLevel.id === 9) storage.unlockAchievement('logic-master');
+          if (currentLevel.id === 10) storage.unlockAchievement('escape-artist');
+          if (score.isParBeaten) storage.unlockAchievement('perfect-navigator');
+          if (snap.robot.energy >= 75) storage.unlockAchievement('energy-saver');
+          if (isVoice) storage.unlockAchievement('voice-commander');
+
+          const profile = storage.getProfile();
+          set({
+            lastScore: score,
+            modalVictory: true,
+            crystals: profile.crystals,
+          });
+
+          speech.speak('Mission accomplished! Excellent work, Commander.');
+        },
+        onGameOver: (reason) => {
+          speech.speak(`Mission halted. ${reason}`);
+        },
+      },
+      get().reducedMotion ? 50 : 220
+    );
+
+    set({ isExecutingCommand: false });
+    return executionSuccess;
+  },
+
+  nextHint: () => {
+    set((state) => ({
+      hintStage: Math.min(2, state.hintStage + 1),
+      modalHint: true,
+    }));
+  },
+
+  nextLevel: () => {
+    const { currentLevelId } = get();
+    if (currentLevelId < 10) {
+      get().loadLevel(currentLevelId + 1);
+    }
+  },
+
+  toggleVoiceListening: () => {
+    const isCurrentlyListening = get().isListeningVoice;
+    if (isCurrentlyListening) {
+      speech.stopListening();
+      set({ isListeningVoice: false });
+    } else {
+      speech.setCallbacks({
+        onInterimResult: (transcript) => {
+          set({ voiceTranscript: transcript });
+        },
+        onFinalResult: (transcript) => {
+          set({ voiceTranscript: transcript, isListeningVoice: false });
+          // Automatically execute voice command
+          get().submitCommand(transcript, true);
+        },
+        onError: (err) => {
+          set({ isListeningVoice: false });
+          alert(err);
+        },
+        onStateChange: (listening) => {
+          set({ isListeningVoice: listening });
+        },
+      });
+
+      const started = speech.startListening();
+      if (started) {
+        set({ isListeningVoice: true, voiceTranscript: '' });
+      }
+    }
+  },
+
+  setVoiceTranscript: (transcript) => set({ voiceTranscript: transcript }),
+
+  toggleMute: () => {
+    const muted = sound.toggleMute();
+    set({ isMuted: muted });
+  },
+
+  setMusicVolume: (v) => {
+    sound.setMusicVolume(v);
+    set({ musicVolume: v });
+  },
+
+  setSfxVolume: (v) => {
+    sound.setSfxVolume(v);
+    set({ sfxVolume: v });
+  },
+
+  setSpeechVolume: (v) => {
+    speech.setVolume(v);
+    set({ speechVolume: v });
+  },
+
+  toggleHighContrast: () => set((s) => ({ highContrast: !s.highContrast })),
+  toggleReducedMotion: () => set((s) => ({ reducedMotion: !s.reducedMotion })),
+
+  setNickname: (nick) => {
+    storage.setNickname(nick);
+    set({ nickname: nick });
+  },
+
+  equipCosmetics: (cosmetics) => {
+    storage.equipCosmetic(cosmetics);
+    storage.unlockAchievement('robot-stylist');
+    set({ cosmetics });
+  },
+
+  setModal: (modal, open) => {
+    set({ [modal]: open } as any);
+  },
+}));

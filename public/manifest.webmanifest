@@ -1,0 +1,17 @@
+{
+  "name": "ROBOQUEST: The Tiny AI Adventure",
+  "short_name": "Roboquest",
+  "description": "Control a friendly robot using natural language and on-device AI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b19",
+  "theme_color": "#00f0ff",
+  "icons": [
+    {
+      "src": "/robot-icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

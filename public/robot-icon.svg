@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#0d1527"/>
+    </linearGradient>
+    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00ffaa"/>
+      <stop offset="100%" stop-color="#00f0ff"/>
+    </linearGradient>
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Antenna -->
+  <line x1="50" y1="12" x2="50" y2="28" stroke="#00f0ff" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="50" cy="12" r="6" fill="#00ffaa" filter="url(#neonGlow)"/>
+
+  <!-- Head Chassis -->
+  <rect x="20" y="28" width="60" height="46" rx="14" fill="#14203d" stroke="#00f0ff" stroke-width="3" filter="url(#neonGlow)"/>
+
+  <!-- Face Screen visor -->
+  <rect x="27" y="36" width="46" height="26" rx="8" fill="#070b19" stroke="#1e305b" stroke-width="1.5"/>
+
+  <!-- Glowing Eyes -->
+  <ellipse cx="39" cy="48" rx="6" ry="7" fill="#00ffaa" filter="url(#neonGlow)"/>
+  <circle cx="41" cy="46" r="2" fill="#ffffff"/>
+  
+  <ellipse cx="61" cy="48" rx="6" ry="7" fill="#00ffaa" filter="url(#neonGlow)"/>
+  <circle cx="63" cy="46" r="2" fill="#ffffff"/>
+
+  <!-- Mouth Display -->
+  <path d="M42 56 Q50 61 58 56" stroke="#00f0ff" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- Ears / Audio Sensors -->
+  <rect x="12" y="42" width="6" height="18" rx="3" fill="#00f0ff"/>
+  <rect x="82" y="42" width="6" height="18" rx="3" fill="#00f0ff"/>
+
+  <!-- Body Collar -->
+  <path d="M35 74 L65 74 L58 84 L42 84 Z" fill="#00f0ff"/>
+  <!-- Wheels/Treads base -->
+  <rect x="25" y="84" width="50" height="10" rx="5" fill="#14203d" stroke="#00f0ff" stroke-width="2"/>
+</svg>
