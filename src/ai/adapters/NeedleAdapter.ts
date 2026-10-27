@@ -40,18 +40,21 @@ export class NeedleAdapter implements AICommandAdapter {
         throw new Error('WebAssembly is not supported in this browser.');
       }
 
-      // Verify asset accessibility
-      this.statusMessage = 'Checking local Needle model weights (needle3.cact)...';
-      const checkRes = await fetch('/models/needle3.cact', { method: 'HEAD' }).catch(() => null);
-      if (!checkRes || !checkRes.ok) {
-        throw new Error('Model weights (/models/needle3.cact) are missing from the public distribution.');
-      }
+      // Check if local model weights exist; if not, use official pinned Hugging Face URL
+      this.statusMessage = 'Checking Cactus Needle model weights...';
+      const hasLocalModel = await fetch('/models/needle3.cact', { method: 'HEAD' })
+        .then(r => r.ok)
+        .catch(() => false);
 
-      this.statusMessage = 'Compiling Needle WebAssembly engine and allocating tensor memory...';
+      const modelUrl = hasLocalModel
+        ? '/models/needle3.cact'
+        : 'https://huggingface.co/Cactus-Compute/needle3/resolve/2ae11323dc000f5e70c49f7403efa6af12ba9e67/needle3.cact';
+
+      this.statusMessage = 'Allocating WebAssembly memory & initializing Needle 3...';
 
       // Initialize real on-device Cactus Needle session
       this.needleSession = await createNeedle({
-        model: '/models/needle3.cact',
+        model: modelUrl,
         wasmUrl: '/models/needle.wasm',
         workerUrl: '/models/worker.js',
         modelSha256: 'c9d915eca282ed42d1a09b143b592adb4cc6744ffe2d294adf5cfc5548170c38',
@@ -59,7 +62,7 @@ export class NeedleAdapter implements AICommandAdapter {
         stateless: true,
         onDownloadProgress: (progress) => {
           if (progress.percentage) {
-            this.statusMessage = `Loading model weights: ${Math.round(progress.percentage)}%`;
+            this.statusMessage = `Downloading Needle model weights: ${Math.round(progress.percentage)}%`;
           }
         },
         tools: {
