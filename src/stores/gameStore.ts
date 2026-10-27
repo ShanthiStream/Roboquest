@@ -22,6 +22,7 @@ export interface AIInspectorData {
   validationStatus: 'passed' | 'failed' | 'idle';
   validationError?: string;
   latencyMs: number;
+  confidence?: number;
   explanation?: string;
   timestamp: string;
 }
@@ -36,6 +37,8 @@ export interface GameStoreState {
   isExecutingCommand: boolean;
   activeActionIndex: number;
   totalActionSteps: number;
+  currentActionPlan: RobotAction[];
+  overallConfidence: number | null;
 
   // AI Inspector
   inspectorData: AIInspectorData;
@@ -117,6 +120,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   isExecutingCommand: false,
   activeActionIndex: 0,
   totalActionSteps: 0,
+  currentActionPlan: [],
+  overallConfidence: null,
 
   inspectorData: {
     instruction: '',
@@ -167,6 +172,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       currentLevel: level,
       engine: newEngine,
       snapshot: newEngine.getSnapshot(),
+      currentActionPlan: [],
+      overallConfidence: null,
+      activeActionIndex: 0,
+      totalActionSteps: 0,
       hintStage: 0,
       modalVictory: false,
       modalLevelSelect: false,
@@ -181,6 +190,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       currentLevel: level,
       engine: newEngine,
       snapshot: newEngine.getSnapshot(),
+      currentActionPlan: [],
+      overallConfidence: null,
+      activeActionIndex: 0,
+      totalActionSteps: 0,
       hintStage: 0,
     });
   },
@@ -194,6 +207,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       currentLevel: dailyLevel,
       engine: newEngine,
       snapshot: newEngine.getSnapshot(),
+      currentActionPlan: [],
+      overallConfidence: null,
+      activeActionIndex: 0,
+      totalActionSteps: 0,
       hintStage: 0,
       modalDailyChallenge: false,
     });
@@ -204,6 +221,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     engine.reset();
     set({
       snapshot: engine.getSnapshot(),
+      currentActionPlan: [],
+      overallConfidence: null,
+      activeActionIndex: 0,
+      totalActionSteps: 0,
       modalVictory: false,
       hintStage: 0,
     });
@@ -226,6 +247,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     const context = engine.toGameContext();
     const result = await aiManager.parseCommand(instruction, context);
     const activeAdapter = aiManager.getActiveAdapter();
+    const confidenceScore = result.confidence ?? (result.actions[0]?.confidence ?? null);
 
     const inspectorRecord: AIInspectorData = {
       instruction,
@@ -237,6 +259,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       validationStatus: result.success ? 'passed' : 'failed',
       validationError: result.validationError,
       latencyMs: result.latencyMs,
+      confidence: confidenceScore ?? undefined,
       explanation: result.explanation,
       timestamp: new Date().toLocaleTimeString(),
     };
@@ -244,6 +267,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     set((state) => ({
       inspectorData: inspectorRecord,
       inspectorHistory: [inspectorRecord, ...state.inspectorHistory.slice(0, 20)],
+      currentActionPlan: result.actions,
+      overallConfidence: confidenceScore,
+      activeActionIndex: 0,
+      totalActionSteps: result.actions.length,
     }));
 
     if (!result.success || result.actions.length === 0) {

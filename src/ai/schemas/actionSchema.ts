@@ -7,40 +7,48 @@ export const MoveActionSchema = z.object({
   type: z.literal('move'),
   direction: DirectionSchema,
   steps: z.number().int().min(1).max(20),
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const TurnActionSchema = z.object({
   type: z.literal('turn'),
   direction: z.enum(['left', 'right']),
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const CollectActionSchema = z.object({
   type: z.literal('collect'),
   targetId: z.string().min(1),
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const InteractActionSchema = z.object({
   type: z.literal('interact'),
   targetId: z.string().min(1),
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const PushActionSchema = z.object({
   type: z.literal('push'),
   direction: DirectionSchema,
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const WaitActionSchema = z.object({
   type: z.literal('wait'),
   ticks: z.number().int().min(1).max(10),
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const RechargeActionSchema = z.object({
   type: z.literal('recharge'),
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const InspectActionSchema = z.object({
   type: z.literal('inspect'),
   targetId: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const SingleActionSchema = z.discriminatedUnion('type', [

@@ -1,14 +1,14 @@
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
 export type RobotAction =
-  | { type: "move"; direction: Direction; steps: number }
-  | { type: "turn"; direction: "left" | "right" }
-  | { type: "collect"; targetId: string }
-  | { type: "interact"; targetId: string }
-  | { type: "push"; direction: Direction }
-  | { type: "wait"; ticks: number }
-  | { type: "recharge" }
-  | { type: "inspect"; targetId?: string };
+  | { type: "move"; direction: Direction; steps: number; confidence?: number }
+  | { type: "turn"; direction: "left" | "right"; confidence?: number }
+  | { type: "collect"; targetId: string; confidence?: number }
+  | { type: "interact"; targetId: string; confidence?: number }
+  | { type: "push"; direction: Direction; confidence?: number }
+  | { type: "wait"; ticks: number; confidence?: number }
+  | { type: "recharge"; confidence?: number }
+  | { type: "inspect"; targetId?: string; confidence?: number };
 
 export interface VisibleEntity {
   id: string;
@@ -44,6 +44,7 @@ export interface CommandResult {
   rawOutput: string;
   latencyMs: number;
   adapterName: string;
+  confidence?: number;
   validationError?: string;
   explanation?: string;
 }

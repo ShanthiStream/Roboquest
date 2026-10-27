@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../stores/gameStore';
-import { X, Cpu, CheckCircle2, AlertTriangle, Clock, Terminal, BookOpen, Layers } from 'lucide-react';
+import { X, Cpu, CheckCircle2, AlertTriangle, Clock, Terminal, BookOpen, Layers, Sparkles } from 'lucide-react';
 
 export const AIInspector: React.FC = () => {
   const { modalAIInspector, setModal, inspectorData, inspectorHistory } = useGameStore();
@@ -77,19 +77,19 @@ export const AIInspector: React.FC = () => {
           {activeTab === 'current' && (
             <>
               {/* Engine metadata row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
                   <span className="text-slate-400 text-[10px] block uppercase font-sans">Active Engine</span>
                   <span className="text-cyan-300 font-bold text-xs mt-0.5 block truncate">
                     {inspectorData.adapterName}
                   </span>
                   <span className="text-[10px] text-slate-500 mt-1 block">
-                    {inspectorData.isFallback ? 'Deterministic Fallback' : 'Cactus Needle WASM'}
+                    {inspectorData.isFallback ? 'Deterministic' : 'Cactus WASM'}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-                  <span className="text-slate-400 text-[10px] block uppercase font-sans">Schema Validation</span>
+                  <span className="text-slate-400 text-[10px] block uppercase font-sans">Schema Check</span>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {inspectorData.validationStatus === 'passed' ? (
                       <>
@@ -108,10 +108,20 @@ export const AIInspector: React.FC = () => {
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-                  <span className="text-slate-400 text-[10px] block uppercase font-sans">Inference Latency</span>
+                  <span className="text-slate-400 text-[10px] block uppercase font-sans">Latency</span>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <Clock className="w-3.5 h-3.5 text-cyan-400" />
                     <span className="text-cyan-300 font-bold">{inspectorData.latencyMs} ms</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
+                  <span className="text-slate-400 text-[10px] block uppercase font-sans">Model Confidence</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-cyan-300 font-bold">
+                      {inspectorData.confidence !== undefined ? `${Math.round(inspectorData.confidence * 100)}%` : 'N/A'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -133,10 +143,45 @@ export const AIInspector: React.FC = () => {
 
               {/* Generated structured action plan */}
               <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800">
-                <span className="text-slate-400 text-[11px] font-sans font-semibold block mb-1">
-                  2. Generated Structured Action Plan (JSON)
+                <span className="text-slate-400 text-[11px] font-sans font-semibold block mb-2">
+                  2. Generated Structured Action Plan & Confidence Breakdown
                 </span>
-                <pre className="text-cyan-300 bg-slate-900/95 p-3 rounded-lg border border-slate-800 overflow-x-auto text-xs max-h-48 leading-relaxed">
+
+                {inspectorData.generatedActions.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                    {inspectorData.generatedActions.map((act, i) => {
+                      const conf = act.confidence ?? inspectorData.confidence ?? 0.85;
+                      const pct = Math.round(conf * 100);
+                      const badgeColor =
+                        pct >= 85
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : pct >= 70
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+                      return (
+                        <div key={i} className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="text-cyan-400 font-bold">#{i + 1}</span>
+                            <span className="text-slate-200 font-bold uppercase text-[11px]">{act.type}</span>
+                            {'direction' in act && (
+                              <span className="text-slate-400 text-[11px]">
+                                ({act.direction}{'steps' in act ? ` × ${act.steps}` : ''})
+                              </span>
+                            )}
+                            {'targetId' in act && (
+                              <span className="text-slate-400 text-[11px]">({act.targetId})</span>
+                            )}
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeColor}`}>
+                            {pct}% Conf
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <pre className="text-cyan-300 bg-slate-900/95 p-3 rounded-lg border border-slate-800 overflow-x-auto text-xs max-h-40 leading-relaxed">
                   {JSON.stringify(inspectorData.generatedActions, null, 2)}
                 </pre>
               </div>
@@ -214,9 +259,16 @@ export const AIInspector: React.FC = () => {
                         {item.timestamp} • {item.adapterName} • {item.generatedActions.length} action(s)
                       </p>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.validationStatus === 'passed' ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-rose-950 text-rose-400 border border-rose-500/30'}`}>
-                      {item.validationStatus}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {item.confidence !== undefined && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
+                          {Math.round(item.confidence * 100)}% Conf
+                        </span>
+                      )}
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.validationStatus === 'passed' ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-rose-950 text-rose-400 border border-rose-500/30'}`}>
+                        {item.validationStatus}
+                      </span>
+                    </div>
                   </div>
                 ))
               )}

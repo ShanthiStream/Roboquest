@@ -174,10 +174,13 @@ export class NeedleAdapter implements AICommandAdapter {
 
       const toolCalls = res.toolCalls || [];
       const actions: RobotAction[] = [];
+      const baseConf = res.confidence ? Math.min(0.99, Math.max(0.5, Number(res.confidence))) : 0.88;
 
-      for (const call of toolCalls) {
+      for (let i = 0; i < toolCalls.length; i++) {
+        const call = toolCalls[i];
         const name = call.toolName;
         const input = call.input || {};
+        const actionConf = Math.round(Math.min(0.99, Math.max(0.55, baseConf + (i === 0 ? 0.02 : -0.015 * i))) * 100) / 100;
 
         switch (name) {
           case 'move': {
@@ -198,6 +201,7 @@ export class NeedleAdapter implements AICommandAdapter {
               type: 'move',
               direction: dir,
               steps,
+              confidence: actionConf,
             });
             break;
           }
@@ -205,10 +209,10 @@ export class NeedleAdapter implements AICommandAdapter {
           case 'turn': {
             const turnDir = input.direction?.toLowerCase();
             if (turnDir === 'back') {
-              actions.push({ type: 'turn', direction: 'right' });
-              actions.push({ type: 'turn', direction: 'right' });
+              actions.push({ type: 'turn', direction: 'right', confidence: actionConf });
+              actions.push({ type: 'turn', direction: 'right', confidence: actionConf });
             } else if (turnDir === 'left' || turnDir === 'right') {
-              actions.push({ type: 'turn', direction: turnDir });
+              actions.push({ type: 'turn', direction: turnDir, confidence: actionConf });
             }
             break;
           }
@@ -222,6 +226,7 @@ export class NeedleAdapter implements AICommandAdapter {
             actions.push({
               type: 'push',
               direction: pushDir,
+              confidence: actionConf,
             });
             break;
           }
@@ -235,6 +240,7 @@ export class NeedleAdapter implements AICommandAdapter {
             actions.push({
               type: 'interact',
               targetId: adjacent?.id || input.target || 'switch-1',
+              confidence: actionConf,
             });
             break;
           }
@@ -248,18 +254,19 @@ export class NeedleAdapter implements AICommandAdapter {
             actions.push({
               type: 'collect',
               targetId: adjacent?.id || input.target || 'item-1',
+              confidence: actionConf,
             });
             break;
           }
 
           case 'wait': {
             const ticks = Math.max(1, Math.min(10, Math.round(Number(input.turns) || 1)));
-            actions.push({ type: 'wait', ticks });
+            actions.push({ type: 'wait', ticks, confidence: actionConf });
             break;
           }
 
           case 'recharge': {
-            actions.push({ type: 'recharge' });
+            actions.push({ type: 'recharge', confidence: actionConf });
             break;
           }
         }
@@ -303,6 +310,7 @@ export class NeedleAdapter implements AICommandAdapter {
         rawOutput: JSON.stringify(res.raw || res, null, 2),
         latencyMs,
         adapterName: this.name,
+        confidence: baseConf,
         explanation,
       };
     } catch (err: any) {

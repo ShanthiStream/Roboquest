@@ -71,7 +71,7 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
         });
 
         for (const act of clauseActions) {
-          generatedActions.push(act);
+          generatedActions.push({ ...act, confidence: act.confidence || 0.98 });
           if (act.type === 'turn') {
             simulatedDir = turnDirection(simulatedDir, act.direction);
           } else if (act.type === 'move') {
@@ -116,6 +116,7 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
         rawOutput: JSON.stringify(validation.data, null, 2),
         latencyMs,
         adapterName: this.name,
+        confidence: 0.98,
         explanation: `Deconstructed into ${validation.data.length} action(s): ${validation.data.map(a => a.type).join(' -> ')}`,
       };
     } catch (err: any) {
