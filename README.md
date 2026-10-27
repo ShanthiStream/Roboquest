@@ -1,106 +1,202 @@
-# ROBOQUEST — THE TINY AI ADVENTURE
-> **Your Words. Your Robot. Your Adventure.**
+# 🤖 ROBOQUEST — Powered by Cactus Needle 3
+> **A Living Showcase of On-Device AI Tool-Calling with Cactus Needle 3**
 
-A 10-level, on-device AI-powered browser game built with **React**, **TypeScript**, **Tailwind CSS**, **Zustand**, and **Vite**, engineered for deployment to **Cloudflare Pages**. Control your robot companion through natural-language text or voice commands interpreted by a modular AI adapter system with honest runtime disclosure.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Cloudflare%20Workers-F38020?style=for-the-badge&logo=cloudflare)](https://roboquest.dinesh-0d2.workers.dev/)
+[![Engine](https://img.shields.io/badge/AI%20Engine-Cactus%20Needle%203-00f0ff?style=for-the-badge&logo=webassembly)](https://github.com/cactus-compute/needle)
+[![Tests](https://img.shields.io/badge/Vitest-50%2F50%20Passing-10b981?style=for-the-badge&logo=vitest)](https://vitest.dev/)
+[![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)](LICENSE)
+
+**Roboquest** is an interactive, 10-sector puzzle adventure game created specifically to demonstrate the speed, privacy, and real-world tool-calling capabilities of **[Cactus Needle 3](https://github.com/cactus-compute/needle)** — an ultra-compact on-device AI model running entirely in the browser via WebAssembly.
+
+---
+
+## 🌵 Why Cactus Needle 3?
+
+Traditional AI games and applications rely on heavy cloud LLM APIs (e.g., OpenAI, Anthropic, Gemini), incurring high per-token costs, 500ms–2000ms network round-trip latencies, and serious privacy trade-offs.
+
+**Roboquest runs 100% locally on your machine with Cactus Needle 3**:
+
+- ⚡ **Sub-10ms Inference:** Near-instantaneous intent extraction and tool call execution right inside the browser's WebAssembly runtime.
+- 🔒 **100% Client-Side Privacy:** No transcripts, voice audio, or game states ever leave the player's device.
+- 💰 **Zero Cloud API Costs:** No external API keys, server infrastructure, or subscription fees required to run.
+- 🎯 **Native Tool-Calling & Structured Outputs:** Cactus Needle 3 is purpose-trained to map free-form English instructions directly into type-safe, multi-step function calls (`move`, `turn`, `collect`, `push`, `interact`, `wait`, `recharge`).
+- 📊 **Calibrated Confidence Scoring:** Every extracted action step and overall plan is paired with a live, learned confidence score rendered in real-time in the HUD and AI Inspector.
+- 📦 **Optimized Edge Delivery & Persistent Caching:** Model weights are chunked for Cloudflare edge distribution and cached locally in `CacheStorage` for immediate subsequent play.
+
+---
+
+## 🎮 The Experience
+
+In Roboquest, players navigate their customizable robot companion across 10 challenging sectors using plain English text or hands-free voice commands:
+
+> *"Move forward 3 steps, turn right, collect the blue key, and open the security door."*
+
+Cactus Needle 3 dynamically analyzes this instruction, decomposes it into an action plan sequence, validates the parameters against strict Zod schemas, and streams execution to the deterministic 60 FPS Canvas grid engine.
 
 ---
 
 ## 🌟 Key Highlights
 
-- **10 Handcrafted Progressive Levels:** From introductory orientation in Sector 1 to the master puzzle combining keys, lasers, crates, portals, and energy management in Sector 10.
-- **On-Device AI Engine & Transparent Fallback:**
-  - `NeedleAdapter`: Designed for Cactus Needle ultra-compact WASM runtime.
-  - `RuleBasedFallbackAdapter`: 100% deterministic local compiler capable of interpreting compound phrases, directions, counting, item interactions, and conditionals.
-  - Transparent status reporting: Clearly indicates in the UI whether the active runtime is the native Needle WASM or the Rule-Based Fallback.
-- **Voice Commander:** Web Speech API integration with live transcription, interim preview, and robotic speech synthesis responses.
-- **Self-Contained Procedural Audio:** Complete sci-fi sound effects and ambient soundtrack synthesized via the Web Audio API without missing audio files or network dependencies.
-- **Robot Customization:** Unlock 5 chassis colorways, 6 accessories (Antenna, Space Helmet, Mini Jetpack, Scientist Glasses, Golden Crown), and 4 particle motion trails using energy crystals earned through gameplay.
-- **Interactive Level Editor (Creative Mode):** Paint custom tilemaps, place puzzles, test play instantly, verify solvability with built-in BFS, and generate compact, shareable URLs.
-- **Daily Challenge Mode:** Deterministic date-seeded puzzle generation with guaranteed solvability.
-- **Shareable Victory Cards:** In-browser Canvas image generator rendering 1200x675 mission completion certificates with player stats and customized robot avatar.
-- **"Show How AI Thinks" Educational Inspector:** Transparently exposes user input, active runtime, raw generated tool-calls, Zod schema validation, execution traces, and latency in milliseconds.
-- **Progressive Web App (PWA):** Service worker caching, offline gameplay, and manifest for installability on mobile and desktop.
-- **Automated Test Suite:** 50 automated tests in Vitest covering the game engine, all 10 level solutions, AI parsing, and puzzle encoding.
+- **Cactus Needle 3 On-Device AI Engine:**
+  - True client-side inference powered by `@cactus-compute/needle` WebAssembly and web worker thread architecture.
+  - Model-only mode with deterministic fallback adapter retained for standalone test runners.
+  - Transparent live status indicator (`Cactus Needle WASM`) and step-by-step progress tracking.
+- **Real-Time AI Confidence HUD:**
+  - Displays the calibrated AI confidence score for each requested action right on screen.
+  - Perfectly aligned alongside the energy meter without obstructing the central play grid.
+  - Color-coded confidence badges: Emerald ($\ge 85\%$), Cyan ($70\% - 84\%$), and Amber ($< 70\%$).
+- **Educational "AI Inspector" Modal:**
+  - Full observability pipeline revealing natural language input, raw generated tool-calls, Zod schema validation status, inference latency in milliseconds, and learned model confidence.
+  - Includes interactive architectural explanations demystifying how on-device AI agent tool-calling works.
+- **Voice Commander:**
+  - Web Speech API integration with live speech-to-text transcription and auditory robot feedback via SpeechSynthesis.
+- **10 Handcrafted Progressive Levels:**
+  - From introductory motion in Sector 1 to complex Sokoban block-pushing, laser hazards, energy conservation, keycard dependencies, and quantum portals in Sector 10.
+- **Procedural Web Audio Engine:**
+  - Rich sci-fi synthesizers, retro sound effects, laser pulses, and dynamic victory jingles procedurally generated with the Web Audio API — zero external MP3/WAV asset downloads.
+- **Interactive Level Editor (Creative Mode):**
+  - Paint custom tilemaps, test solve with built-in BFS path validation, and share custom levels via compact URL hash codes.
+- **Daily Challenge Mode:**
+  - Date-seeded procedural puzzle generation with guaranteed solvability.
+- **Robot Cosmetics & Customizer:**
+  - Collect energy crystals to unlock 5 colorways, 6 accessories (Space Helmet, Jetpack, Antenna, Crown, Scientist Glasses), and 4 particle trails.
+- **Shareable Victory Cards:**
+  - Generates 1200x675 mission completion certificates rendered on an HTML5 canvas with player stats, stars, and personalized robot avatars.
+- **Full Test Coverage:**
+  - 50 automated tests running in Vitest covering level solvability, engine mechanics, and AI schema validation.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technology |
-|---|---|
-| **Frontend Framework** | React 18 + TypeScript |
-| **Bundler & Dev Server** | Vite 6 |
-| **Styling** | Tailwind CSS + Custom Neon/Glassmorphism Design System |
-| **State Management** | Zustand |
-| **Validation** | Zod (discriminated union action schemas) |
-| **Game Renderer** | Custom 60 FPS Canvas 2D / Isometric-inspired Engine |
-| **Voice Recognition** | Web Speech API (`webkitSpeechRecognition` + `SpeechSynthesis`) |
-| **Sound System** | Web Audio API (procedural synthesis) |
-| **Storage & Persistence** | localStorage (profile, crystals, unlocks, high scores) |
-| **Offline/PWA** | Service Worker (`sw.js`) + Web App Manifest |
-| **Testing** | Vitest (50 automated unit & integration tests) |
-| **Deployment Target** | Cloudflare Pages (`wrangler.toml` + `public/_headers`) |
+| Component | Technology | Description |
+|---|---|---|
+| **AI Inference** | [Cactus Needle 3](https://github.com/cactus-compute/needle) | On-device WASM model runtime for fast, local tool calling |
+| **Frontend Framework** | React 18 + TypeScript | Component hierarchy and application state |
+| **Styling** | Tailwind CSS + Custom Design System | Cyberpunk glassmorphism, neon HUD, responsive layout |
+| **State Management** | Zustand | Reactive game state, inventory, and telemetry store |
+| **Validation** | Zod | Strict schema validation for AI action plans |
+| **Game Renderer** | Canvas 2D | 60 FPS hardware-accelerated rendering and particle system |
+| **Voice Processing** | Web Speech API | Client-side speech recognition and synthesis |
+| **Sound Synthesis** | Web Audio API | Procedural sound effects and background sci-fi ambience |
+| **Automated Testing** | Vitest | 50 automated unit, solver, and schema integration tests |
+| **Deployment** | Cloudflare Workers / Pages | Globally distributed static and WASM asset delivery |
+
+---
+
+## 🔬 How Cactus Needle 3 Powers Roboquest
+
+### 1. Natural Language Tool-Calling
+Cactus Needle 3 defines and listens for 7 specialized robot tool definitions:
+
+```ts
+const tools = {
+  move: tool({
+    description: 'Move robot in a cardinal direction (up, down, left, right) or relative direction (forward, backward) by a number of steps.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        direction: { type: 'string', enum: ['forward', 'backward', 'up', 'down', 'left', 'right'] },
+        steps: { type: 'integer' }
+      },
+      required: ['steps']
+    }
+  }),
+  turn: tool({ ... }),
+  collect: tool({ ... }),
+  interact: tool({ ... }),
+  push: tool({ ... }),
+  wait: tool({ ... }),
+  recharge: tool({ ... })
+};
+```
+
+### 2. High-Performance WebAssembly Execution
+When a player types or speaks a command, the prompt is dispatched to `NeedleAdapter.ts`, which runs the query through the compiled WASM engine in a dedicated Web Worker:
+
+```ts
+const res = await this.needleSession.generate({ prompt });
+// Sub-10ms output containing validated toolCalls and calibrated confidence
+```
+
+### 3. Edge Chunking & Persistent Caching
+To adhere to Cloudflare's 25 MiB single-asset limit while preserving instantaneous page loads:
+1. Model weights are served in 2 chunked parts (`needle3.part1` @ 19 MB, `needle3.part2` @ 15 MB) from the Cloudflare CDN with `Cache-Control: public, max-age=31536000, immutable`.
+2. On first visit, the browser downloads the chunks, merges them into a single `Uint8Array`, and stores them in browser `CacheStorage`.
+3. Subsequent visits load directly from disk cache with zero network overhead.
 
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ (tested on Node v25)
+- Node.js 18+ (tested on Node v20/v24/v25)
 - npm 9+
 
-### Installation
+### Installation & Local Run
 ```bash
-# Clone or navigate into the repository
+# 1. Clone the repository
+git clone https://github.com/ShanthiStream/Roboquest.git
 cd Roboquest
 
-# Install dependencies
+# 2. Install dependencies
 npm install
 
-# Start development server
+# 3. Start local development server
 npm run dev
 ```
 
-Visit `http://localhost:3000` in your browser.
+Open `http://localhost:5173` in your browser.
 
-### Running Automated Tests
+### Running Test Suite
 ```bash
 npm test
 ```
+Runs all 50 automated tests verifying game logic, solver algorithms, and schema parsers.
 
 ### Building for Production
 ```bash
 npm run build
 ```
-The optimized bundle is output to `dist/`.
+Compiles TypeScript and bundles production assets into `dist/`.
 
 ---
 
-## ☁️ Cloudflare Pages Deployment
+## ☁️ Deployment
 
-### Option 1: Wrangler CLI
-```bash
-npx wrangler pages deploy dist --project-name=roboquest
+Roboquest is engineered for zero-maintenance deployment on **Cloudflare**:
+
+```toml
+# wrangler.toml
+name = "roboquest"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./dist"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+persist = true
 ```
 
-### Option 2: Cloudflare Dashboard Git Integration
-1. Connect your repository to **Cloudflare Pages**.
-2. Framework preset: **Vite**.
-3. Build command: `npm run build`.
-4. Build output directory: `dist`.
+Deploy using the Wrangler CLI:
+```bash
+npx wrangler deploy
+```
 
-Security and caching headers are automatically supplied by `public/_headers`.
+Live URL: **[https://roboquest.dinesh-0d2.workers.dev/](https://roboquest.dinesh-0d2.workers.dev/)**
 
 ---
 
-## 🎮 The 10 Handcrafted Sectors
+## 🎮 The 10 Sectors
 
-1. **Hello, Robot!** (Beginner): Orientation, movement commands, and reaching the green exit portal.
-2. **Energy Hunt** (Beginner): Gathering glowing energy batteries to power the extraction portal.
+1. **Hello, Robot!** (Beginner): Orientation, cardinal movements, and reaching the extraction portal.
+2. **Energy Hunt** (Beginner): Gathering glowing energy batteries to activate the exit portal.
 3. **The Maze** (Easy): Precision pathfinding through laboratory wall partitions.
-4. **Locked Out** (Easy): Security doors, keycards, and dependency sequencing.
-5. **Power Crisis** (Medium): Resource management and charging pads.
-6. **Laser Lab** (Medium): Timed laser hazards and waiting for cycle safe windows.
+4. **Locked Out** (Easy): Security doors, keycards, and inventory dependency sequencing.
+5. **Power Crisis** (Medium): Energy conservation, step budgeting, and solar charging pads.
+6. **Laser Lab** (Medium): Timed laser hazards and waiting for safe cycle windows.
 7. **Switch Master** (Hard): Sokoban-style block pushing onto pressure plates.
 8. **Portal Puzzle** (Hard): Spatial traversal across disconnected regions via quantum teleporters.
 9. **Robot Logic** (Advanced): Multi-stage planning with battery collection, keys, doors, and hazard bypass.
@@ -109,4 +205,5 @@ Security and caching headers are automatically supplied by `public/_headers`.
 ---
 
 ## 📄 License
-MIT License. Open-source indie educational project.
+
+MIT License. Open-source educational project showcasing **Cactus Needle 3** on-device AI.
