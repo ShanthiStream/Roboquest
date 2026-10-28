@@ -142,39 +142,39 @@ export const PuzzleEditorView: React.FC = () => {
   return (
     <div className="flex-1 w-full flex flex-col p-4 max-w-6xl mx-auto overflow-y-auto">
       {/* Top action bar */}
-      <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-cyan-500/20">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-4 pb-3 border-b border-cyan-500/20">
         <button
           onClick={() => setMode('story')}
           className="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Exit to Story</span>
+          <span>Exit</span>
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-slate-900 border border-slate-700">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-mono font-semibold bg-slate-900 border border-slate-700">
             {isSolvable ? (
               <span className="text-emerald-400 flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" /> Solvable Path Verified
+                <Check className="w-3.5 h-3.5" /> Path OK
               </span>
             ) : (
               <span className="text-rose-400 flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" /> Exit Path Blocked
+                <AlertCircle className="w-3.5 h-3.5" /> Blocked
               </span>
             )}
           </div>
 
           <button
             onClick={handleShare}
-            className="px-4 py-2 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/40 text-xs font-semibold flex items-center gap-1.5 transition"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/40 text-xs font-semibold flex items-center gap-1.5 transition"
           >
             {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
-            <span>{copiedLink ? 'Link Copied!' : 'Copy Share Link'}</span>
+            <span>{copiedLink ? 'Copied!' : 'Share'}</span>
           </button>
 
           <button
             onClick={handleTestPlay}
-            className="px-5 py-2 rounded-xl neon-button text-xs font-orbitron font-bold flex items-center gap-1.5 shadow-lg"
+            className="px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl neon-button text-xs font-orbitron font-bold flex items-center gap-1.5 shadow-lg"
           >
             <Play className="w-3.5 h-3.5" />
             <span>TEST PLAY</span>

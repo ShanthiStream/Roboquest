@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../stores/gameStore';
-import { Send, Mic, MicOff, Lightbulb, RotateCcw, Undo2 } from 'lucide-react';
+import { Send, Mic, MicOff, Lightbulb, RotateCcw, Undo2, Gamepad2 } from 'lucide-react';
 
-export const CommandInput: React.FC = () => {
+interface CommandInputProps {
+  onToggleDpad?: () => void;
+  isDpadOpen?: boolean;
+}
+
+export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpadOpen }) => {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -68,15 +73,15 @@ export const CommandInput: React.FC = () => {
   ].slice(0, 4);
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-2 flex flex-col gap-2">
+    <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-1.5 sm:py-2 flex flex-col gap-1.5 sm:gap-2">
       {/* Quick suggestions chips */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs text-slate-400 no-scrollbar">
-        <span className="font-semibold text-cyan-400 shrink-0">Try:</span>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs text-slate-400 no-scrollbar touch-pan-x select-none">
+        <span className="font-semibold text-cyan-400 shrink-0 text-[11px] sm:text-xs">Try:</span>
         {suggestions.map((sug, i) => (
           <button
             key={i}
             onClick={() => setInput(sug)}
-            className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700/60 hover:border-cyan-500/60 text-slate-300 hover:text-cyan-300 transition shrink-0"
+            className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700/60 hover:border-cyan-500/60 text-slate-300 hover:text-cyan-300 transition shrink-0 text-[11px] sm:text-xs active:scale-95"
           >
             "{sug}"
           </button>
@@ -84,29 +89,46 @@ export const CommandInput: React.FC = () => {
       </div>
 
       {/* Main command bar form */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        {/* Quick actions buttons: Undo, Restart, Hint */}
-        <div className="flex items-center gap-1">
+      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 sm:gap-2">
+        {/* Quick actions buttons: D-Pad, Undo, Restart, Hint */}
+        <div className="flex items-center gap-1 shrink-0">
+          {onToggleDpad && (
+            <button
+              type="button"
+              onClick={onToggleDpad}
+              className={`p-2 sm:p-2.5 rounded-xl border transition shadow-sm flex items-center justify-center ${
+                isDpadOpen
+                  ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(0,240,255,0.4)]'
+                  : 'bg-slate-900/90 border-slate-700/80 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/50'
+              }`}
+              title={isDpadOpen ? 'Hide Virtual Touch D-Pad' : 'Show Virtual Touch D-Pad'}
+            >
+              <Gamepad2 className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={undoAction}
-            className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-cyan-300 hover:border-cyan-500/60 transition"
+            className="p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-cyan-300 hover:border-cyan-500/60 transition shadow-sm active:scale-95"
             title="Undo Last Step"
           >
             <Undo2 className="w-4 h-4" />
           </button>
+
           <button
             type="button"
             onClick={restartLevel}
-            className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-amber-300 hover:border-amber-500/60 transition"
+            className="p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-amber-300 hover:border-amber-500/60 transition shadow-sm active:scale-95"
             title="Restart Level"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
+
           <button
             type="button"
             onClick={nextHint}
-            className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 transition"
+            className="p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 transition shadow-sm active:scale-95"
             title="Get Progressive Hint"
           >
             <Lightbulb className="w-4 h-4" />
@@ -114,7 +136,7 @@ export const CommandInput: React.FC = () => {
         </div>
 
         {/* Text Input Container */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <input
             type="text"
             value={input}
@@ -123,12 +145,12 @@ export const CommandInput: React.FC = () => {
             disabled={isExecutingCommand || snapshot.status !== 'playing'}
             placeholder={
               isListeningVoice
-                ? 'Listening... Speak your command now...'
+                ? 'Listening... Speak command...'
                 : isExecutingCommand
-                ? 'Robot executing action sequence...'
-                : 'Type or speak: "Move forward 3", "Turn left and collect battery", "Go to exit"...'
+                ? 'Executing actions...'
+                : 'Say or type: "Move forward 3", "Push right"...'
             }
-            className={`w-full px-4 py-3 rounded-xl bg-slate-900/90 border text-sm sm:text-base font-mono outline-none transition shadow-inner ${
+            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-slate-900/90 border text-xs sm:text-sm md:text-base font-mono outline-none transition shadow-inner truncate ${
               isListeningVoice
                 ? 'border-red-500/80 ring-2 ring-red-500/30 text-red-300'
                 : 'border-cyan-500/30 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 text-slate-100 placeholder-slate-500'
@@ -140,23 +162,24 @@ export const CommandInput: React.FC = () => {
         <button
           type="button"
           onClick={toggleVoiceListening}
-          className={`p-3 rounded-xl border transition shadow-lg flex items-center justify-center ${
+          className={`p-2.5 sm:p-3 rounded-xl border transition shadow-lg flex items-center justify-center shrink-0 active:scale-95 ${
             isListeningVoice
               ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]'
               : 'bg-slate-900/90 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400'
           }`}
           title={isListeningVoice ? 'Stop Voice Recording' : 'Voice Command (Web Speech)'}
         >
-          {isListeningVoice ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          {isListeningVoice ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
         </button>
 
         {/* Execute Command Button */}
         <button
           type="submit"
           disabled={!input.trim() || isExecutingCommand || snapshot.status !== 'playing'}
-          className="px-5 py-3 rounded-xl neon-button font-orbitron font-bold text-xs sm:text-sm flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+          className="px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl neon-button font-orbitron font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shadow-md shrink-0 active:scale-95"
+          title="Execute Command"
         >
-          <span>EXECUTE</span>
+          <span className="hidden sm:inline">EXECUTE</span>
           <Send className="w-4 h-4" />
         </button>
       </form>

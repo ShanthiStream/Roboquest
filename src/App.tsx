@@ -74,7 +74,7 @@ export const App: React.FC = () => {
   }, [highContrast]);
 
   return (
-    <div className="h-screen w-full bg-cyber-900 text-slate-100 flex flex-col overflow-hidden">
+    <div className="h-[100dvh] min-h-[100dvh] w-full bg-cyber-900 text-slate-100 flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)]">
       {/* Top Navbar */}
       <Navbar />
 

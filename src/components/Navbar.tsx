@@ -25,13 +25,13 @@ export const Navbar: React.FC = () => {
   } = useGameStore();
 
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-cyan-500/20 px-4 py-2.5 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 w-full glass-panel border-b border-cyan-500/20 px-2 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2">
       {/* Brand logo & active runtime badge */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setModal('modalLevelSelect', true)}>
-          <img src="/robot-icon.svg" alt="Roboquest Mascot" className="w-9 h-9 drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]" />
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer" onClick={() => setModal('modalLevelSelect', true)}>
+          <img src="/robot-icon.svg" alt="Roboquest Mascot" className="w-7 h-7 sm:w-9 sm:h-9 drop-shadow-[0_0_8px_rgba(0,240,255,0.6)] flex-shrink-0" />
           <div className="hidden sm:block">
-            <h1 className="font-orbitron font-extrabold text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400">
+            <h1 className="font-orbitron font-extrabold text-base sm:text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400">
               ROBOQUEST
             </h1>
             <p className="text-[10px] text-cyan-400/80 font-medium tracking-tight -mt-1">
@@ -66,53 +66,56 @@ export const Navbar: React.FC = () => {
       </div>
 
       {/* Mode navigation tabs */}
-      <nav className="flex items-center gap-1 sm:gap-2">
+      <nav className="flex items-center gap-1">
         <button
           onClick={() => setModal('modalLevelSelect', true)}
-          className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1 sm:gap-1.5 ${
             mode === 'story'
               ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
               : 'text-slate-300 hover:bg-slate-800/60'
           }`}
+          title="Story Levels"
         >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Story</span>
+          <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="hidden xs:inline sm:inline">Story</span>
         </button>
 
         <button
           onClick={loadDailyLevel}
-          className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1 sm:gap-1.5 ${
             mode === 'daily'
               ? 'bg-amber-500/20 border border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(255,179,0,0.3)]'
               : 'text-slate-300 hover:bg-slate-800/60'
           }`}
+          title="Daily Challenge"
         >
-          <Calendar className="w-3.5 h-3.5" />
+          <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
           <span className="hidden sm:inline">Daily</span>
         </button>
 
         <button
           onClick={() => setMode('creative')}
-          className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1 sm:gap-1.5 ${
             mode === 'creative'
               ? 'bg-purple-500/20 border border-purple-400 text-purple-300 shadow-[0_0_12px_rgba(176,38,255,0.3)]'
               : 'text-slate-300 hover:bg-slate-800/60'
           }`}
+          title="Puzzle Creator"
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
           <span className="hidden sm:inline">Creator</span>
         </button>
       </nav>
 
       {/* Right controls: Crystals, Achievements, Customizer, Inspector, Settings, Audio */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="flex items-center gap-1 sm:gap-1.5">
         {/* Crystal balance */}
         <div
           onClick={() => setModal('modalCustomizer', true)}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-bold cursor-pointer hover:border-cyan-400 transition"
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-bold cursor-pointer hover:border-cyan-400 transition"
           title="Energy Crystals — Click to Customize Robot"
         >
-          <span className="text-cyan-400">💎</span>
+          <span className="text-cyan-400 text-xs">💎</span>
           <span>{crystals}</span>
         </div>
 
@@ -122,16 +125,16 @@ export const Navbar: React.FC = () => {
           className="p-1.5 sm:p-2 rounded-lg text-slate-300 hover:text-cyan-300 hover:bg-slate-800/70 transition"
           title="Robot Customization"
         >
-          <Palette className="w-4 h-4" />
+          <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
 
-        {/* Achievements */}
+        {/* Achievements - visible on sm+ */}
         <button
           onClick={() => setModal('modalAchievements', true)}
-          className="p-1.5 sm:p-2 rounded-lg text-slate-300 hover:text-amber-300 hover:bg-slate-800/70 transition"
+          className="hidden sm:block p-1.5 sm:p-2 rounded-lg text-slate-300 hover:text-amber-300 hover:bg-slate-800/70 transition"
           title="Achievements & Badges"
         >
-          <Trophy className="w-4 h-4" />
+          <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
 
         {/* AI Inspector ("Show How AI Thinks") */}
@@ -140,7 +143,7 @@ export const Navbar: React.FC = () => {
           className="p-1.5 sm:p-2 rounded-lg text-slate-300 hover:text-purple-300 hover:bg-slate-800/70 transition relative"
           title="Show How AI Thinks"
         >
-          <Cpu className="w-4 h-4" />
+          <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
 
         {/* Audio Mute toggle */}
@@ -149,7 +152,7 @@ export const Navbar: React.FC = () => {
           className="p-1.5 sm:p-2 rounded-lg text-slate-300 hover:text-cyan-300 hover:bg-slate-800/70 transition"
           title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
         >
-          {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
+          {isMuted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         </button>
 
         {/* Settings */}
@@ -158,7 +161,7 @@ export const Navbar: React.FC = () => {
           className="p-1.5 sm:p-2 rounded-lg text-slate-300 hover:text-cyan-300 hover:bg-slate-800/70 transition"
           title="Settings & Accessibility"
         >
-          <Settings className="w-4 h-4" />
+          <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
       </div>
     </header>

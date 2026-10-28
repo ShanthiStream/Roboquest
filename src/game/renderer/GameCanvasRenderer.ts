@@ -8,6 +8,21 @@ export class GameCanvasRenderer {
   private cameraX: number = 0;
   private cameraY: number = 0;
 
+  // Zoom & Pan for Mobile, iPad, and Desktop
+  private zoom: number = 1;
+  private targetZoom: number = 1;
+  private minZoom: number = 0.35;
+  private maxZoom: number = 2.5;
+  private userPanX: number = 0;
+  private userPanY: number = 0;
+  private isPointerDown: boolean = false;
+  private dragStartX: number = 0;
+  private dragStartY: number = 0;
+  private initialPinchDist: number = 0;
+  private initialPinchZoom: number = 1;
+  private lastTapTime: number = 0;
+  private hasCustomZoom: boolean = false;
+
   // Robot render interpolation
   private robotCurrentX: number = 0;
   private robotCurrentY: number = 0;
@@ -46,8 +61,23 @@ export class GameCanvasRenderer {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
+    this.canvas.style.touchAction = 'none';
+
     this.handleResize();
     window.addEventListener('resize', this.handleResize);
+    window.addEventListener('orientationchange', this.handleOrientationChange);
+
+    // Touch & Pointer gesture listeners for mobile & iPad
+    this.canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+    this.canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+    this.canvas.addEventListener('touchend', this.handleTouchEnd, { passive: true });
+    this.canvas.addEventListener('touchcancel', this.handleTouchEnd, { passive: true });
+
+    // Desktop/iPad mouse & trackpad pan/zoom
+    this.canvas.addEventListener('mousedown', this.handleMouseDown);
+    window.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('mouseup', this.handleMouseUp);
+    this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
 
     if (canvas.parentElement && typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.handleResize());
@@ -55,18 +85,163 @@ export class GameCanvasRenderer {
     }
   }
 
+  private handleOrientationChange = () => {
+    setTimeout(() => {
+      this.handleResize();
+      if (!this.hasCustomZoom) {
+        this.resetView();
+      }
+    }, 150);
+  };
+
+  private handleTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 1) {
+      this.isPointerDown = true;
+      this.dragStartX = e.touches[0].clientX;
+      this.dragStartY = e.touches[0].clientY;
+
+      // Double-tap to reset view
+      const now = performance.now();
+      if (now - this.lastTapTime < 300) {
+        this.resetView();
+        this.lastTapTime = 0;
+      } else {
+        this.lastTapTime = now;
+      }
+    } else if (e.touches.length === 2) {
+      e.preventDefault();
+      this.isPointerDown = false;
+      this.initialPinchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      this.initialPinchZoom = this.zoom;
+      this.hasCustomZoom = true;
+    }
+  };
+
+  private handleTouchMove = (e: TouchEvent) => {
+    if (e.touches.length === 1 && this.isPointerDown) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - this.dragStartX;
+      const dy = e.touches[0].clientY - this.dragStartY;
+      this.dragStartX = e.touches[0].clientX;
+      this.dragStartY = e.touches[0].clientY;
+      this.userPanX -= dx / this.zoom;
+      this.userPanY -= dy / this.zoom;
+    } else if (e.touches.length === 2 && this.initialPinchDist > 0) {
+      e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = dist / this.initialPinchDist;
+      this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.initialPinchZoom * factor));
+      this.targetZoom = this.zoom;
+    }
+  };
+
+  private handleTouchEnd = () => {
+    this.isPointerDown = false;
+    this.initialPinchDist = 0;
+  };
+
+  private handleMouseDown = (e: MouseEvent) => {
+    this.isPointerDown = true;
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
+  };
+
+  private handleMouseMove = (e: MouseEvent) => {
+    if (!this.isPointerDown) return;
+    const dx = e.clientX - this.dragStartX;
+    const dy = e.clientY - this.dragStartY;
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
+    this.userPanX -= dx / this.zoom;
+    this.userPanY -= dy / this.zoom;
+  };
+
+  private handleMouseUp = () => {
+    this.isPointerDown = false;
+  };
+
+  private handleWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    this.hasCustomZoom = true;
+    const factor = e.deltaY < 0 ? 1.12 : 0.88;
+    this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * factor));
+    this.targetZoom = this.zoom;
+  };
+
+  public zoomIn = () => {
+    this.hasCustomZoom = true;
+    this.zoom = Math.min(this.maxZoom, this.zoom * 1.25);
+    this.targetZoom = this.zoom;
+  };
+
+  public zoomOut = () => {
+    this.hasCustomZoom = true;
+    this.zoom = Math.max(this.minZoom, this.zoom * 0.8);
+    this.targetZoom = this.zoom;
+  };
+
+  public resetView = () => {
+    this.userPanX = 0;
+    this.userPanY = 0;
+    this.hasCustomZoom = false;
+    const autoZoom = this.calculateAutoFitZoom();
+    this.zoom = autoZoom;
+    this.targetZoom = autoZoom;
+  };
+
+  private calculateAutoFitZoom(): number {
+    const dpr = window.devicePixelRatio || 1;
+    const viewW = (this.canvas.width || 800) / dpr;
+    const viewH = (this.canvas.height || 600) / dpr;
+
+    const cols = (this.tiles && this.tiles[0]) ? this.tiles[0].length : 8;
+    const rows = this.tiles ? this.tiles.length : 7;
+    const mapW = cols * this.tileSize;
+    const mapH = rows * this.tileSize;
+
+    // Responsive padding
+    const padX = viewW < 500 ? 16 : 40;
+    const padY = viewH < 500 ? 16 : 40;
+
+    const scaleX = (viewW - padX) / Math.max(1, mapW);
+    const scaleY = (viewH - padY) / Math.max(1, mapH);
+    const fit = Math.min(scaleX, scaleY);
+
+    if (viewW < 600) {
+      // Mobile phones: ensure whole puzzle is comfortably framed
+      return Math.max(0.42, Math.min(1.0, fit));
+    } else if (viewW <= 1024) {
+      // Tablet / iPad
+      return Math.max(0.60, Math.min(1.15, fit));
+    }
+    // Desktop
+    return Math.max(0.75, Math.min(1.25, fit));
+  }
+
   private handleResize = () => {
     if (!this.canvas) return;
     const parent = this.canvas.parentElement;
     const rect = parent ? parent.getBoundingClientRect() : { width: window.innerWidth, height: 600 };
     const dpr = window.devicePixelRatio || 1;
-    const w = Math.max(300, rect.width || window.innerWidth);
-    const h = Math.max(300, rect.height || 500);
+    const w = Math.max(280, rect.width || window.innerWidth);
+    const h = Math.max(260, rect.height || 500);
 
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);
     this.canvas.style.width = `${w}px`;
     this.canvas.style.height = `${h}px`;
+
+    if (!this.hasCustomZoom && this.tiles && this.tiles.length > 0) {
+      const autoZoom = this.calculateAutoFitZoom();
+      this.zoom = autoZoom;
+      this.targetZoom = autoZoom;
+    }
   };
 
   start() {
@@ -87,6 +262,16 @@ export class GameCanvasRenderer {
       this.animFrameId = null;
     }
     window.removeEventListener('resize', this.handleResize);
+    window.removeEventListener('orientationchange', this.handleOrientationChange);
+    this.canvas.removeEventListener('touchstart', this.handleTouchStart);
+    this.canvas.removeEventListener('touchmove', this.handleTouchMove);
+    this.canvas.removeEventListener('touchend', this.handleTouchEnd);
+    this.canvas.removeEventListener('touchcancel', this.handleTouchEnd);
+    this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+    window.removeEventListener('mousemove', this.handleMouseMove);
+    window.removeEventListener('mouseup', this.handleMouseUp);
+    this.canvas.removeEventListener('wheel', this.handleWheel);
+
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
@@ -102,14 +287,21 @@ export class GameCanvasRenderer {
     this.robotTargetY = robot.y;
     this.robotDirection = robot.direction;
 
-    // First time sync init or level reset
-    if (!this.initialized) {
+    // First time sync init or level reset: automatically adapt to device screen
+    if (!this.initialized || !this.hasCustomZoom) {
       this.initialized = true;
       this.robotCurrentX = robot.x;
       this.robotCurrentY = robot.y;
+      this.userPanX = 0;
+      this.userPanY = 0;
+
+      const autoZoom = this.calculateAutoFitZoom();
+      this.zoom = autoZoom;
+      this.targetZoom = autoZoom;
+
       const dpr = window.devicePixelRatio || 1;
-      const viewW = (this.canvas.width || 800) / dpr;
-      const viewH = (this.canvas.height || 600) / dpr;
+      const viewW = (this.canvas.width || 800) / dpr / this.zoom;
+      const viewH = (this.canvas.height || 600) / dpr / this.zoom;
       this.cameraX = this.robotCurrentX * this.tileSize + this.tileSize / 2 - viewW / 2;
       this.cameraY = this.robotCurrentY * this.tileSize + this.tileSize / 2 - viewH / 2;
     }
@@ -117,6 +309,9 @@ export class GameCanvasRenderer {
 
   private update(dt: number) {
     this.idleTime += dt;
+
+    // Smooth zoom interpolation
+    this.zoom += (this.targetZoom - this.zoom) * Math.min(1, 15 * dt);
 
     // Lerp robot position for fluid smooth motion
     const lerpSpeed = 12 * dt;
@@ -160,17 +355,33 @@ export class GameCanvasRenderer {
       }
     }
 
-    // Camera follow robot
+    // Camera follow robot or map center
     const dpr = window.devicePixelRatio || 1;
-    const viewW = this.canvas.width / dpr;
-    const viewH = this.canvas.height / dpr;
+    const viewW = (this.canvas.width / dpr) / this.zoom;
+    const viewH = (this.canvas.height / dpr) / this.zoom;
 
-    // Center camera on robot
-    const targetCamX = this.robotCurrentX * this.tileSize + this.tileSize / 2 - viewW / 2;
-    const targetCamY = this.robotCurrentY * this.tileSize + this.tileSize / 2 - viewH / 2;
+    const cols = (this.tiles && this.tiles[0]) ? this.tiles[0].length : 8;
+    const rows = this.tiles ? this.tiles.length : 7;
+    const mapW = cols * this.tileSize;
+    const mapH = rows * this.tileSize;
 
-    this.cameraX += (targetCamX - this.cameraX) * 8 * dt;
-    this.cameraY += (targetCamY - this.cameraY) * 8 * dt;
+    let targetCamX = this.robotCurrentX * this.tileSize + this.tileSize / 2 - viewW / 2;
+    let targetCamY = this.robotCurrentY * this.tileSize + this.tileSize / 2 - viewH / 2;
+
+    // If map fits inside view dimensions, center the entire puzzle nicely
+    if (mapW <= viewW) {
+      targetCamX = mapW / 2 - viewW / 2;
+    }
+    if (mapH <= viewH) {
+      targetCamY = mapH / 2 - viewH / 2;
+    }
+
+    // Include user drag pan offset
+    targetCamX += this.userPanX;
+    targetCamY += this.userPanY;
+
+    this.cameraX += (targetCamX - this.cameraX) * 10 * dt;
+    this.cameraY += (targetCamY - this.cameraY) * 10 * dt;
   }
 
   private spawnTrailParticle() {
@@ -204,13 +415,13 @@ export class GameCanvasRenderer {
     const height = this.canvas.height / dpr;
 
     this.ctx.save();
-    this.ctx.scale(dpr, dpr);
+    this.ctx.scale(dpr * this.zoom, dpr * this.zoom);
 
-    this.ctx.clearRect(0, 0, width, height);
+    this.ctx.clearRect(0, 0, width / this.zoom, height / this.zoom);
 
     // Dark sci-fi laboratory background
     this.ctx.fillStyle = '#070b19';
-    this.ctx.fillRect(0, 0, width, height);
+    this.ctx.fillRect(0, 0, width / this.zoom, height / this.zoom);
 
     this.ctx.save();
     this.ctx.translate(-Math.round(this.cameraX), -Math.round(this.cameraY));
