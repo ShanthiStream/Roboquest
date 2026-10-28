@@ -58,6 +58,9 @@ export class AIAdapterManager {
         if (fallbackRes.success && fallbackRes.actions.length > 0) {
           return fallbackRes;
         }
+        if (result.confidence === undefined && fallbackRes.confidence !== undefined) {
+          return fallbackRes;
+        }
       }
     }
 

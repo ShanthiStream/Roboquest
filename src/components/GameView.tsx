@@ -65,10 +65,17 @@ function getConfidenceBadge(confidence?: number) {
       glow: 'text-cyan-400',
     };
   }
+  if (pct >= 50) {
+    return {
+      pct: `${pct}%`,
+      bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.2)]',
+      glow: 'text-amber-400',
+    };
+  }
   return {
     pct: `${pct}%`,
-    bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.2)]',
-    glow: 'text-amber-400',
+    bg: 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.25)]',
+    glow: 'text-rose-400',
   };
 }
 
@@ -469,6 +476,25 @@ export const GameView: React.FC = () => {
                           </div>
                         );
                       })}
+                    </div>
+                  ) : inspectorData.validationStatus === 'failed' ? (
+                    <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-[11px] font-mono text-rose-200 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-rose-300 font-bold uppercase text-[10px]">
+                          Command Rejected
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
+                          {Math.round((overallConfidence ?? inspectorData.confidence ?? 0.14) * 100)}% Conf
+                        </span>
+                      </div>
+                      {inspectorData.instruction && (
+                        <p className="text-[10px] text-slate-300 truncate bg-slate-950/70 px-2 py-1 rounded border border-rose-500/20">
+                          "{inspectorData.instruction}"
+                        </p>
+                      )}
+                      <p className="text-[10px] text-rose-300/90 leading-relaxed font-sans">
+                        {inspectorData.validationError || 'Instruction could not be grounded to valid sector actions.'}
+                      </p>
                     </div>
                   ) : (
                     <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex flex-col gap-1.5">

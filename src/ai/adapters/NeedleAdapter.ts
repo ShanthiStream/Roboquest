@@ -1,6 +1,6 @@
 import { AICommandAdapter, CommandResult, Direction, GameContext, RobotAction, UserPerformanceMetrics, AIPerformanceReport } from '../types';
 import { validateActionPlan } from '../schemas/actionSchema';
-import { RuleBasedFallbackAdapter } from './RuleBasedFallbackAdapter';
+import { RuleBasedFallbackAdapter, findUnknownDomainWords } from './RuleBasedFallbackAdapter';
 import { createNeedle, tool } from 'cactus-needle/browser';
 
 const OPPOSITE_DIRECTIONS: Record<Direction, Direction> = {
@@ -195,10 +195,47 @@ export class NeedleAdapter implements AICommandAdapter {
       const grounded = await this.spatialResolver.parseCommand(prompt, context);
       const latencyMs = Math.round(performance.now() - startTime);
 
+      // 1. Semantic & Spatial World-Model Verification:
+      // Reject hallucinated / out-of-domain concepts (e.g. "Go to get coffee") or missing sector entities
+      const unknownWords = findUnknownDomainWords(prompt, context);
+      if (unknownWords.length > 0) {
+        const rawModelConf = typeof res.confidence === 'number' && !isNaN(res.confidence) ? res.confidence : 0.14;
+        const lowConf = Math.round(Math.min(0.22, Math.max(0.08, rawModelConf < 0.25 ? rawModelConf : 0.14)) * 100) / 100;
+        const quotedUnknown = unknownWords.map(w => `"${w}"`).join(', ');
+        return {
+          success: false,
+          actions: [],
+          rawOutput: JSON.stringify(res.raw || res, null, 2),
+          latencyMs,
+          adapterName: this.name,
+          confidence: lowConf,
+          validationError: `Unrecognized target or concept ${quotedUnknown} — not present in this sector.`,
+          explanation: `Cactus Needle + World Verifier rejected instruction (${Math.round(lowConf * 100)}% confidence): ${quotedUnknown} is not a valid robot tool or sector object.`,
+        };
+      }
+
+      if (!grounded.success && grounded.validationError) {
+        const lowConf = grounded.confidence ?? 0.24;
+        return {
+          success: false,
+          actions: [],
+          rawOutput: JSON.stringify(res.raw || res, null, 2),
+          latencyMs,
+          adapterName: this.name,
+          confidence: lowConf,
+          validationError: grounded.validationError,
+          explanation: grounded.explanation || `World-model verification failed (${Math.round(lowConf * 100)}% confidence): ${grounded.validationError}`,
+        };
+      }
+
       const toolCalls = res.toolCalls || [];
       const actions: RobotAction[] = [];
       const rawConf = typeof res.confidence === 'number' && !isNaN(res.confidence) ? res.confidence : 0.88;
-      let baseConf = Math.round(Math.min(0.98, Math.max(0.92, rawConf >= 0.9 ? rawConf : 0.92 + rawConf * 0.06)) * 100) / 100;
+      // Blend Needle's raw confidence with the spatial verifier's calibrated score
+      const groundedBaseConf = grounded.confidence ?? 0.88;
+      let baseConf = Math.round(
+        Math.min(0.98, Math.max(0.45, groundedBaseConf * 0.75 + Math.max(0.6, rawConf) * 0.25)) * 100
+      ) / 100;
 
       let simDir: Direction = context.robot.direction;
       let simX = context.robot.x;
@@ -209,7 +246,7 @@ export class NeedleAdapter implements AICommandAdapter {
         const call = toolCalls[i];
         const name = call.toolName;
         const input = call.input || {};
-        const actionConf = Math.round(Math.min(0.99, Math.max(0.92, baseConf + (i === 0 ? 0.01 : -0.01 * i))) * 100) / 100;
+        const actionConf = Math.round(Math.min(0.99, Math.max(0.45, baseConf + (i === 0 ? 0.01 : -0.01 * i))) * 100) / 100;
 
         switch (name) {
           case 'navigate': {
@@ -357,10 +394,10 @@ export class NeedleAdapter implements AICommandAdapter {
 
       let finalActions = actions;
       if (grounded.success && grounded.actions.length > 0 && (actions.length === 0 || needsSpatialGrounding)) {
-        baseConf = Math.max(baseConf, 0.95);
-        finalActions = grounded.actions.map((act, idx) => ({
+        baseConf = grounded.confidence ?? baseConf;
+        finalActions = grounded.actions.map((act) => ({
           ...act,
-          confidence: Math.round(Math.min(0.99, Math.max(0.93, baseConf + (idx === 0 ? 0.01 : -0.01 * idx))) * 100) / 100,
+          confidence: act.confidence ?? Math.round(Math.min(0.99, baseConf + 0.01) * 100) / 100,
         }));
       }
 
@@ -372,8 +409,9 @@ export class NeedleAdapter implements AICommandAdapter {
           rawOutput: JSON.stringify(res.raw || res, null, 2),
           latencyMs,
           adapterName: this.name,
+          confidence: 0.16,
           validationError: 'Needle did not identify any valid tool calls for this instruction.',
-          explanation: res.reasoning || 'Model withheld prediction (off-topic or ungrounded instruction).',
+          explanation: res.reasoning || 'Model withheld prediction (16% confidence — off-topic or ungrounded instruction).',
         };
       }
 

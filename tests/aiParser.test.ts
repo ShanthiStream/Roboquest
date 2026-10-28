@@ -74,5 +74,14 @@ describe('AI Natural Language Command Parser & Validation', () => {
     const res = await adapter.parseCommand('xyzzy flabbergast banana rainbow', dummyContext);
     expect(res.success).toBe(false);
     expect(res.validationError).toContain('Could not translate');
+    expect(res.confidence).toBeLessThanOrEqual(0.2);
+  });
+
+  it('rejects out-of-domain targets like "Go to get coffee" with low confidence instead of fabricating actions', async () => {
+    const res = await adapter.parseCommand('Go to get coffee', dummyContext);
+    expect(res.success).toBe(false);
+    expect(res.actions).toHaveLength(0);
+    expect(res.confidence).toBeLessThanOrEqual(0.2);
+    expect(res.validationError).toContain('"coffee"');
   });
 });

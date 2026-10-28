@@ -296,7 +296,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
     if (!result.success || result.actions.length === 0) {
       speech.speak("I couldn't process that instruction. Please try again.");
-      set({ isExecutingCommand: false });
+      set((state) => ({
+        isExecutingCommand: false,
+        snapshot: {
+          ...state.snapshot,
+          lastMessage: result.validationError || "Instruction rejected: not grounded in this sector.",
+        },
+      }));
       return false;
     }
 

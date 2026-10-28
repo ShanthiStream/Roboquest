@@ -63,7 +63,17 @@ export const Navbar: React.FC = () => {
               : '⚡ AI: Cactus Needle'}
           </span>
           {inspectorData.confidence !== undefined && (
-            <span className="ml-0.5 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+            <span
+              className={`ml-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                inspectorData.confidence >= 0.85
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : inspectorData.confidence >= 0.7
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                  : inspectorData.confidence >= 0.5
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+              }`}
+            >
               {Math.round(inspectorData.confidence * 100)}% Conf
             </span>
           )}

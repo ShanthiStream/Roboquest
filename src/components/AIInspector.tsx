@@ -118,8 +118,28 @@ export const AIInspector: React.FC = () => {
                 <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
                   <span className="text-slate-400 text-[10px] block uppercase font-sans">Model Confidence</span>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                    <span className="text-cyan-300 font-bold">
+                    <Sparkles
+                      className={`w-3.5 h-3.5 ${
+                        (inspectorData.confidence ?? 0.85) >= 0.85
+                          ? 'text-emerald-400'
+                          : (inspectorData.confidence ?? 0.85) >= 0.7
+                          ? 'text-cyan-400'
+                          : (inspectorData.confidence ?? 0.85) >= 0.5
+                          ? 'text-amber-400'
+                          : 'text-rose-400'
+                      }`}
+                    />
+                    <span
+                      className={`font-bold ${
+                        (inspectorData.confidence ?? 0.85) >= 0.85
+                          ? 'text-emerald-300'
+                          : (inspectorData.confidence ?? 0.85) >= 0.7
+                          ? 'text-cyan-300'
+                          : (inspectorData.confidence ?? 0.85) >= 0.5
+                          ? 'text-amber-300'
+                          : 'text-rose-300'
+                      }`}
+                    >
                       {inspectorData.confidence !== undefined ? `${Math.round(inspectorData.confidence * 100)}%` : 'N/A'}
                     </span>
                   </div>
@@ -261,7 +281,17 @@ export const AIInspector: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {item.confidence !== undefined && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
+                            item.confidence >= 0.85
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30'
+                              : item.confidence >= 0.7
+                              ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/30'
+                              : item.confidence >= 0.5
+                              ? 'bg-amber-950/80 text-amber-300 border-amber-500/30'
+                              : 'bg-rose-950/80 text-rose-300 border-rose-500/30'
+                          }`}
+                        >
                           {Math.round(item.confidence * 100)}% Conf
                         </span>
                       )}
