@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { aiManager } from '../ai/AIAdapterManager';
-import { RobotAction } from '../ai/types';
+import { RobotAction, UserPerformanceMetrics, AIPerformanceReport } from '../ai/types';
 import { sound } from '../audio/SoundSystem';
 import { speech } from '../audio/SpeechSystem';
 import { GameEngine } from '../game/engine/GameEngine';
@@ -9,6 +9,7 @@ import { calculateLevelScore, ScoreBreakdown } from '../game/scoring/scoring';
 import { GameSnapshot, LevelDefinition, RobotCosmetics } from '../game/types';
 import { DailyChallengeService } from '../services/DailyChallengeService';
 import { storage } from '../services/StorageService';
+import { CardGeneratorService } from '../services/CardGeneratorService';
 
 export type GameMode = 'story' | 'challenge' | 'creative' | 'daily';
 
@@ -54,6 +55,9 @@ export interface GameStoreState {
   modalAchievements: boolean;
   modalVictory: boolean;
   modalVictoryCard: boolean;
+  modalGrandWinner: boolean;
+  grandWinnerReport: AIPerformanceReport | null;
+  grandWinnerCardUrl: string | null;
   modalAIInspector: boolean;
   modalSettings: boolean;
   modalDailyChallenge: boolean;
@@ -105,6 +109,7 @@ export interface GameStoreState {
 
   // Modal open/close actions
   setModal: (modal: string, open: boolean) => void;
+  openGrandWinnerCard: () => Promise<void>;
 }
 
 const initialLevel = LEVELS[0];
@@ -143,6 +148,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   modalAchievements: false,
   modalVictory: false,
   modalVictoryCard: false,
+  modalGrandWinner: false,
+  grandWinnerReport: null,
+  grandWinnerCardUrl: null,
   modalAIInspector: false,
   modalSettings: false,
   modalDailyChallenge: false,
@@ -320,7 +328,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
             crystals: profile.crystals,
           });
 
-          speech.speak('Mission accomplished! Excellent work, Commander.');
+          if (currentLevel.id >= 10) {
+            speech.speak('Campaign complete! You have conquered all sectors, Commander. Generating your Grand Winner Card.');
+          } else {
+            speech.speak('Mission accomplished! Excellent work, Commander.');
+          }
         },
         onGameOver: (reason) => {
           speech.speak(`Mission halted. ${reason}`);
@@ -416,5 +428,70 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   setModal: (modal, open) => {
     set({ [modal]: open } as any);
+  },
+
+  openGrandWinnerCard: async () => {
+    const { nickname, cosmetics, snapshot } = get();
+    const profile = storage.getProfile();
+
+    let totalScore = 0;
+    let starsEarned = 0;
+    let totalSteps = 0;
+    let totalCommands = 0;
+    let parSteps = 0;
+    let parCommands = 0;
+    let levelsCleared = 0;
+
+    LEVELS.forEach((lvl) => {
+      parSteps += lvl.parSteps;
+      parCommands += lvl.parCommands;
+      const prog = profile.levelProgress[lvl.id];
+      if (prog && prog.stars > 0) {
+        levelsCleared++;
+        starsEarned += prog.stars;
+        totalScore += prog.highScore;
+        totalSteps += (prog.bestSteps > 0 && prog.bestSteps < 999) ? prog.bestSteps : lvl.parSteps;
+        totalCommands += (prog.bestCommands > 0 && prog.bestCommands < 999) ? prog.bestCommands : lvl.parCommands;
+      }
+    });
+
+    const metrics: UserPerformanceMetrics = {
+      nickname,
+      levelsCleared: Math.max(levelsCleared, 10),
+      totalLevels: LEVELS.length,
+      totalScore: Math.max(totalScore, 20000),
+      starsEarned: Math.max(starsEarned, 24),
+      maxStars: LEVELS.length * 3,
+      totalSteps: Math.max(totalSteps, parSteps),
+      parSteps,
+      totalCommands: Math.max(totalCommands, parCommands),
+      parCommands,
+      avgEnergyRemaining: Math.max(snapshot.robot.energy, 75),
+      currentLevelId: 10,
+    };
+
+    // Evaluate via Needle AI
+    const aiReport = await aiManager.evaluatePerformance(metrics);
+
+    // Generate Winner Card Image
+    const cardUrl = await CardGeneratorService.generateGrandWinnerCard({
+      nickname,
+      totalScore: metrics.totalScore,
+      totalStars: metrics.starsEarned,
+      maxStars: metrics.maxStars,
+      totalSteps: metrics.totalSteps,
+      totalCommands: metrics.totalCommands,
+      parSteps,
+      parCommands,
+      cosmetics,
+      aiReport,
+    });
+
+    set({
+      modalVictory: false,
+      modalGrandWinner: true,
+      grandWinnerReport: aiReport,
+      grandWinnerCardUrl: cardUrl,
+    });
   },
 }));

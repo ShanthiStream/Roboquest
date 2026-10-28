@@ -2,14 +2,15 @@ import React from 'react';
 import { useGameStore } from '../stores/gameStore';
 import { LEVELS } from '../game/levels/levelData';
 import { storage } from '../services/StorageService';
-import { X, Lock, Play, Star } from 'lucide-react';
+import { X, Lock, Play, Star, Trophy, Crown } from 'lucide-react';
 
 export const LevelSelectModal: React.FC = () => {
-  const { modalLevelSelect, setModal, loadLevel, currentLevelId } = useGameStore();
+  const { modalLevelSelect, setModal, loadLevel, currentLevelId, openGrandWinnerCard } = useGameStore();
 
   if (!modalLevelSelect) return null;
 
   const profile = storage.getProfile();
+  const isCampaignCompleted = (profile.levelProgress[10]?.stars || 0) > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -34,6 +35,35 @@ export const LevelSelectModal: React.FC = () => {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Campaign Conquered Banner */}
+        {isCampaignCompleted && (
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border border-amber-400/50 flex flex-wrap items-center justify-between gap-3 shadow-[0_0_20px_rgba(255,191,0,0.2)]">
+            <div className="flex items-center gap-2.5">
+              <span className="p-1.5 rounded-lg bg-amber-500/30 text-amber-300">
+                <Crown className="w-4 h-4 fill-amber-400" />
+              </span>
+              <div>
+                <span className="text-xs font-orbitron font-bold text-amber-300 block">
+                  CAMPAIGN CHAMPION: ALL 10 SECTORS CONQUERED!
+                </span>
+                <span className="text-[11px] text-amber-200/80 font-mono">
+                  Your Needle AI performance report and Grand Winner Card are available.
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setModal('modalLevelSelect', false);
+                openGrandWinnerCard();
+              }}
+              className="px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-orbitron font-bold text-xs flex items-center gap-1.5 shadow-md transition"
+            >
+              <Trophy className="w-3.5 h-3.5 fill-slate-950" />
+              <span>View Winner Card</span>
+            </button>
+          </div>
+        )}
 
         {/* Level Grid */}
         <div className="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

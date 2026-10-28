@@ -49,6 +49,33 @@ export interface CommandResult {
   explanation?: string;
 }
 
+export interface UserPerformanceMetrics {
+  nickname: string;
+  levelsCleared: number;
+  totalLevels: number;
+  totalScore: number;
+  starsEarned: number;
+  maxStars: number;
+  totalSteps: number;
+  parSteps: number;
+  totalCommands: number;
+  parCommands: number;
+  avgEnergyRemaining: number;
+  currentLevelId?: number;
+}
+
+export interface AIPerformanceReport {
+  tier: 'Cybernetic Grandmaster' | 'Apex Tactician' | 'Quantum Navigator' | 'Master Operator' | 'Cyber Scout';
+  efficiencyScore: number; // 0 - 100
+  playstyle: string;
+  strengths: string[];
+  aiSummary: string;
+  confidence: number;
+  latencyMs: number;
+  modelName: string;
+  isOnDevice: boolean;
+}
+
 export interface AICommandAdapter {
   readonly id: string;
   readonly name: string;
@@ -59,5 +86,7 @@ export interface AICommandAdapter {
   
   initialize(): Promise<void>;
   parseCommand(instruction: string, context: GameContext): Promise<CommandResult>;
+  evaluatePerformance?(metrics: UserPerformanceMetrics): Promise<AIPerformanceReport>;
   dispose(): Promise<void>;
 }
+

@@ -9,6 +9,7 @@ import { AchievementsModal } from './components/AchievementsModal';
 import { AIInspector } from './components/AIInspector';
 import { VictoryModal } from './components/VictoryModal';
 import { VictoryCardModal } from './components/VictoryCardModal';
+import { GrandWinnerModal } from './components/GrandWinnerModal';
 import { SettingsModal } from './components/SettingsModal';
 import { HintDialog } from './components/HintDialog';
 import { PuzzleEncoder } from './editor/PuzzleEncoder';
@@ -89,6 +90,7 @@ export const App: React.FC = () => {
       <AIInspector />
       <VictoryModal onOpenCard={(url) => setVictoryCardUrl(url)} />
       <VictoryCardModal cardUrl={victoryCardUrl} onClose={() => setVictoryCardUrl(null)} />
+      <GrandWinnerModal />
       <SettingsModal />
       <HintDialog />
     </div>
