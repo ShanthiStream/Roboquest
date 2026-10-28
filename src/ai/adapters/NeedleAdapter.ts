@@ -222,6 +222,16 @@ export class NeedleAdapter implements AICommandAdapter {
             const requestedDir = input.direction?.toLowerCase();
             if (['up', 'down', 'left', 'right'].includes(requestedDir)) {
               pushDir = requestedDir as Direction;
+            } else {
+              const adjacentCrate = context.entities.find(e =>
+                e.type === 'crate' && Math.abs(e.x - context.robot.x) + Math.abs(e.y - context.robot.y) === 1
+              );
+              if (adjacentCrate) {
+                if (adjacentCrate.x > context.robot.x) pushDir = 'right';
+                else if (adjacentCrate.x < context.robot.x) pushDir = 'left';
+                else if (adjacentCrate.y > context.robot.y) pushDir = 'down';
+                else if (adjacentCrate.y < context.robot.y) pushDir = 'up';
+              }
             }
             actions.push({
               type: 'push',

@@ -6,10 +6,9 @@ import { CloudAdapter } from './adapters/CloudAdapter';
 export class AIAdapterManager {
   private adapters: Map<string, AICommandAdapter> = new Map();
   private activeAdapterId: string = 'cactus-needle';
-  public fallbackEnabled: boolean = false; // Rule-based fallback disabled: Model-only mode
+  public fallbackEnabled: boolean = true; // Seamless fallback enabled to ensure gameplay continuity
 
   constructor() {
-    // Retain fallback adapter for test suites & manual debugging, but keep disabled for gameplay
     const fallback = new RuleBasedFallbackAdapter();
     const needle = new NeedleAdapter();
     const cloud = new CloudAdapter();
@@ -20,7 +19,7 @@ export class AIAdapterManager {
   }
 
   async initialize(): Promise<void> {
-    // Only initialize and activate the Cactus Needle model
+    // Initialize Cactus Needle model as primary on-device AI
     this.activeAdapterId = 'cactus-needle';
     const needle = this.adapters.get('cactus-needle');
     if (needle) {
@@ -30,11 +29,10 @@ export class AIAdapterManager {
 
   getActiveAdapter(): AICommandAdapter {
     const adapter = this.adapters.get(this.activeAdapterId);
-    if (adapter && (adapter.id !== 'rule-based-fallback' || this.fallbackEnabled)) {
+    if (adapter) {
       return adapter;
     }
-    // Always return Cactus Needle model
-    return this.adapters.get('cactus-needle')!;
+    return this.adapters.get('cactus-needle') || this.adapters.get('rule-based-fallback')!;
   }
 
   getAllAdapters(): AICommandAdapter[] {
@@ -42,10 +40,6 @@ export class AIAdapterManager {
   }
 
   setActiveAdapter(id: string): void {
-    if (id === 'rule-based-fallback' && !this.fallbackEnabled) {
-      console.warn('[AIAdapterManager] Rule-based fallback is disabled. Game is configured to use only the on-device AI model.');
-      return;
-    }
     if (this.adapters.has(id)) {
       this.activeAdapterId = id;
     }
@@ -53,7 +47,21 @@ export class AIAdapterManager {
 
   async parseCommand(instruction: string, context: GameContext): Promise<CommandResult> {
     const adapter = this.getActiveAdapter();
-    return adapter.parseCommand(instruction, context);
+    const result = await adapter.parseCommand(instruction, context);
+
+    // If active adapter (e.g. Needle) is unready, fails, or produces no actions,
+    // seamlessly fall back to rule-based parser so commands like push and move always execute
+    if (!result.success || result.actions.length === 0) {
+      const fallback = this.adapters.get('rule-based-fallback');
+      if (fallback && fallback.id !== adapter.id) {
+        const fallbackRes = await fallback.parseCommand(instruction, context);
+        if (fallbackRes.success && fallbackRes.actions.length > 0) {
+          return fallbackRes;
+        }
+      }
+    }
+
+    return result;
   }
 
   async evaluatePerformance(metrics: UserPerformanceMetrics): Promise<AIPerformanceReport> {

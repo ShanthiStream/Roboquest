@@ -80,6 +80,12 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
             if (act.direction === 'down') simY += act.steps;
             if (act.direction === 'left') simX -= act.steps;
             if (act.direction === 'right') simX += act.steps;
+          } else if (act.type === 'push') {
+            simulatedDir = act.direction;
+            if (act.direction === 'up') simY -= 1;
+            if (act.direction === 'down') simY += 1;
+            if (act.direction === 'left') simX -= 1;
+            if (act.direction === 'right') simX += 1;
           }
         }
       }
@@ -170,14 +176,59 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
       return actions;
     }
 
-    // Check "push" (crate / block)
-    if (clause.includes('push')) {
-      let pushDir: Direction = context.robot.direction;
+    // Check "push" (crate / block / box)
+    if (clause.includes('push') || clause.includes('shove')) {
+      let pushDir: Direction | null = null;
       if (clause.includes('up') || clause.includes('north')) pushDir = 'up';
       else if (clause.includes('down') || clause.includes('south')) pushDir = 'down';
       else if (clause.includes('left') || clause.includes('west')) pushDir = 'left';
       else if (clause.includes('right') || clause.includes('east')) pushDir = 'right';
-      actions.push({ type: 'push', direction: pushDir });
+
+      // Check if robot is already adjacent to a crate
+      const adjacentCrate = context.entities.find(e =>
+        e.type === 'crate' && Math.abs(e.x - context.robot.x) + Math.abs(e.y - context.robot.y) === 1
+      );
+
+      if (adjacentCrate) {
+        if (!pushDir) {
+          if (adjacentCrate.x > context.robot.x) pushDir = 'right';
+          else if (adjacentCrate.x < context.robot.x) pushDir = 'left';
+          else if (adjacentCrate.y > context.robot.y) pushDir = 'down';
+          else if (adjacentCrate.y < context.robot.y) pushDir = 'up';
+          else pushDir = context.robot.direction;
+        }
+        actions.push({ type: 'push', direction: pushDir });
+        return actions;
+      }
+
+      // If robot is not adjacent, find crate in level and pathfind to approach it
+      const targetCrate = context.entities.find(e => e.type === 'crate');
+      if (targetCrate) {
+        const plate = context.entities.find(e => e.type === 'pressure-plate');
+        if (!pushDir && plate) {
+          if (plate.x > targetCrate.x) pushDir = 'right';
+          else if (plate.x < targetCrate.x) pushDir = 'left';
+          else if (plate.y > targetCrate.y) pushDir = 'down';
+          else if (plate.y < targetCrate.y) pushDir = 'up';
+        }
+        if (!pushDir) pushDir = 'right';
+
+        let approachX = targetCrate.x;
+        let approachY = targetCrate.y;
+        if (pushDir === 'right') approachX -= 1;
+        else if (pushDir === 'left') approachX += 1;
+        else if (pushDir === 'down') approachY -= 1;
+        else if (pushDir === 'up') approachY += 1;
+
+        const path = this.simplePathTo(context.robot.x, context.robot.y, approachX, approachY);
+        for (const step of this.groupPathSteps(path)) {
+          actions.push(step);
+        }
+        actions.push({ type: 'push', direction: pushDir });
+        return actions;
+      }
+
+      actions.push({ type: 'push', direction: pushDir || context.robot.direction });
       return actions;
     }
 

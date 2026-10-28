@@ -383,14 +383,32 @@ export class GameEngine {
   }
 
   private pushCrate(dir: Direction) {
-    const crateCoord = this.getNextCoord(this.robot.x, this.robot.y, dir);
-    const crate = this.entities.find(e => e.type === 'crate' && e.x === crateCoord.x && e.y === crateCoord.y) as CrateEntity | undefined;
+    let targetDir = dir;
+    let crateCoord = this.getNextCoord(this.robot.x, this.robot.y, targetDir);
+    let crate = this.entities.find(e => e.type === 'crate' && e.x === crateCoord.x && e.y === crateCoord.y) as CrateEntity | undefined;
+
+    // If no crate in target direction, check if there is an adjacent crate
+    if (!crate) {
+      const adjacentCrates = this.entities.filter(e =>
+        e.type === 'crate' && Math.abs(e.x - this.robot.x) + Math.abs(e.y - this.robot.y) === 1
+      ) as CrateEntity[];
+
+      if (adjacentCrates.length === 1) {
+        crate = adjacentCrates[0];
+        if (crate.x > this.robot.x) targetDir = 'right';
+        else if (crate.x < this.robot.x) targetDir = 'left';
+        else if (crate.y > this.robot.y) targetDir = 'down';
+        else if (crate.y < this.robot.y) targetDir = 'up';
+        crateCoord = { x: crate.x, y: crate.y };
+      }
+    }
+
     if (!crate) {
       this.lastMessage = 'No movable crate in that direction to push.';
       return;
     }
 
-    const pushTo = this.getNextCoord(crateCoord.x, crateCoord.y, dir);
+    const pushTo = this.getNextCoord(crateCoord.x, crateCoord.y, targetDir);
     if (!this.isPassable(pushTo.x, pushTo.y)) {
       sound.playError();
       this.lastMessage = 'Crate path is blocked.';
@@ -403,9 +421,10 @@ export class GameEngine {
     sound.playSwitch();
     this.lastMessage = `Crate pushed to (${pushTo.x}, ${pushTo.y}).`;
 
-    // Move robot into old crate pos
+    // Move robot into old crate pos and face pushed direction
     this.robot.x = crateCoord.x;
     this.robot.y = crateCoord.y;
+    this.robot.direction = targetDir;
     this.stepsTaken++;
 
     // Update pressure plates
