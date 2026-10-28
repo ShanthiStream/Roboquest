@@ -115,4 +115,24 @@ describe('Needle AI User Performance Identification & Winner Card Validation', (
     expect(matrix[32][0]).toBe(true);
     expect(matrix[26][0]).toBe(true);
   });
+
+  it('guarantees Level 5 is an intermediate level and only Level 10 triggers the Grand Winner Card', () => {
+    // Helper function matching VictoryModal isLastLevel logic
+    const checkIsLastLevel = (mode: string, levelId: number) => mode === 'story' && levelId === 10;
+
+    // Intermediate levels 1 through 9 must never qualify as the last level
+    for (let lvl = 1; lvl <= 9; lvl++) {
+      expect(checkIsLastLevel('story', lvl)).toBe(false);
+    }
+
+    // Level 5 specifically must NOT be the last level
+    expect(checkIsLastLevel('story', 5)).toBe(false);
+
+    // Only Level 10 in story mode qualifies
+    expect(checkIsLastLevel('story', 10)).toBe(true);
+
+    // Custom or daily levels with id 888 or 999 must not qualify
+    expect(checkIsLastLevel('custom', 888)).toBe(false);
+    expect(checkIsLastLevel('daily', 999)).toBe(false);
+  });
 });

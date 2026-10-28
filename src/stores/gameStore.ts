@@ -328,8 +328,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
             crystals: profile.crystals,
           });
 
-          if (currentLevel.id >= 10) {
-            speech.speak('Campaign complete! You have conquered all sectors, Commander. Generating your Grand Winner Card.');
+          if (get().mode === 'story' && currentLevel.id === 10) {
+            speech.speak('Campaign complete! You have conquered all 10 sectors, Commander. Generating your Grand Winner Card.');
           } else {
             speech.speak('Mission accomplished! Excellent work, Commander.');
           }

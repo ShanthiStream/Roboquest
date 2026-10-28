@@ -15,15 +15,16 @@ class SpeechSystem {
   private isSupported: boolean = false;
 
   constructor() {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    if (SpeechRecognition) {
-      this.isSupported = true;
-      this.recognition = new SpeechRecognition();
-      this.recognition.continuous = false;
-      this.recognition.interimResults = true;
-      this.recognition.lang = 'en-US';
+      if (SpeechRecognition) {
+        this.isSupported = true;
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = false;
+        this.recognition.interimResults = true;
+        this.recognition.lang = 'en-US';
 
       this.recognition.onstart = () => {
         this.isListening = true;
@@ -69,6 +70,7 @@ class SpeechSystem {
       };
     }
   }
+}
 
   isVoiceSupported(): boolean {
     return this.isSupported;

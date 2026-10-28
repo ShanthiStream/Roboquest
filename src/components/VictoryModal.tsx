@@ -1,28 +1,26 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { useGameStore } from '../stores/gameStore';
-import { CardGeneratorService } from '../services/CardGeneratorService';
-import { Star, Share2, ArrowRight, RotateCcw, Trophy, Crown } from 'lucide-react';
+import { Star, ArrowRight, RotateCcw, Trophy, Crown } from 'lucide-react';
 
 interface VictoryModalProps {
-  onOpenCard: (cardUrl: string) => void;
+  onOpenCard?: (cardUrl: string) => void;
 }
 
-export const VictoryModal: React.FC<VictoryModalProps> = ({ onOpenCard }) => {
+export const VictoryModal: React.FC<VictoryModalProps> = () => {
   const {
     modalVictory,
     setModal,
+    mode,
     currentLevel,
     lastScore,
-    snapshot,
-    nickname,
-    cosmetics,
     nextLevel,
     restartLevel,
     openGrandWinnerCard,
   } = useGameStore();
 
-  const isLastLevel = currentLevel.id >= 10;
+  // The Grand Winner Card is exclusively reserved for conquering the entire 10-sector campaign
+  const isLastLevel = mode === 'story' && currentLevel.id === 10;
 
   useEffect(() => {
     if (modalVictory) {
@@ -38,21 +36,6 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onOpenCard }) => {
   }, [modalVictory]);
 
   if (!modalVictory || !lastScore) return null;
-
-  const handleGenerateCard = async () => {
-    const cardUrl = await CardGeneratorService.generateCard({
-      nickname,
-      levelTitle: currentLevel.title,
-      levelNumber: currentLevel.id,
-      stars: lastScore.stars,
-      score: lastScore.totalScore,
-      steps: snapshot.stepsTaken,
-      commands: snapshot.commandsUsed,
-      cosmetics,
-    });
-    setModal('modalVictory', false);
-    onOpenCard(cardUrl);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
@@ -125,24 +108,16 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onOpenCard }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-4">
+        <div className="w-full flex flex-col sm:flex-row gap-3 mt-4">
           <button
             onClick={() => {
               setModal('modalVictory', false);
               restartLevel();
             }}
-            className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+            className="sm:w-1/3 px-4 py-3 rounded-xl border border-slate-700 bg-slate-900/80 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-4 h-4" />
             <span>Replay</span>
-          </button>
-
-          <button
-            onClick={isLastLevel ? openGrandWinnerCard : handleGenerateCard}
-            className="px-4 py-2.5 rounded-xl border border-cyan-500/60 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-[0_0_12px_rgba(0,240,255,0.2)]"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>{isLastLevel ? 'Share Winner Card' : 'Share Card'}</span>
           </button>
 
           {isLastLevel ? (
@@ -150,10 +125,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onOpenCard }) => {
               onClick={() => {
                 openGrandWinnerCard();
               }}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 font-orbitron font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(255,191,0,0.5)] hover:brightness-110 active:scale-95 transition"
+              className="sm:flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 font-orbitron font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(255,191,0,0.6)] hover:brightness-110 active:scale-95 transition"
             >
               <Trophy className="w-4 h-4 fill-slate-950 text-slate-950" />
-              <span>WINNER CARD</span>
+              <span>VIEW WINNER CARD</span>
             </button>
           ) : (
             <button
@@ -161,10 +136,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onOpenCard }) => {
                 setModal('modalVictory', false);
                 nextLevel();
               }}
-              className="px-4 py-2.5 rounded-xl neon-button text-xs font-orbitron font-bold flex items-center justify-center gap-1.5 shadow-lg"
+              className="sm:flex-1 px-5 py-3 rounded-xl neon-button text-xs font-orbitron font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition"
             >
               <span>Next Sector</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           )}
         </div>
