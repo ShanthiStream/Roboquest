@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { useGameStore } from '../stores/gameStore';
-import { Star, ArrowRight, RotateCcw, Trophy, Crown } from 'lucide-react';
+import { Star, ArrowRight, RotateCcw, Trophy, Crown, Sparkles, Cpu } from 'lucide-react';
 
 interface VictoryModalProps {
   onOpenCard?: (cardUrl: string) => void;
@@ -17,6 +17,9 @@ export const VictoryModal: React.FC<VictoryModalProps> = () => {
     nextLevel,
     restartLevel,
     openGrandWinnerCard,
+    overallConfidence,
+    currentActionPlan,
+    inspectorData,
   } = useGameStore();
 
   // The Grand Winner Card is exclusively reserved for conquering the entire 10-sector campaign
@@ -103,8 +106,63 @@ export const VictoryModal: React.FC<VictoryModalProps> = () => {
         </div>
 
         {/* Crystals Earned */}
-        <div className="my-3 px-4 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold font-mono">
+        <div className="my-2.5 px-4 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold font-mono">
           +{lastScore.stars * 50} 💎 Energy Crystals Awarded!
+        </div>
+
+        {/* AI Agent Confidence & Action Telemetry Summary */}
+        <div className="w-full bg-slate-950/80 border border-purple-500/35 rounded-xl px-3.5 py-2.5 my-1 flex items-center justify-between gap-2 text-left">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-orbitron font-bold uppercase tracking-wider text-purple-200">
+                  AI Agent Confidence
+                </span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                    (overallConfidence ?? 0.95) >= 0.85
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : (overallConfidence ?? 0.95) >= 0.7
+                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                      : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  }`}
+                >
+                  {Math.round((overallConfidence ?? inspectorData.confidence ?? 0.95) * 100)}% Overall
+                </span>
+                {currentActionPlan.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-950/80 text-purple-200 border border-purple-500/30">
+                    {Math.round(
+                      (currentActionPlan[0].confidence ?? overallConfidence ?? 0.95) * 100
+                    )}
+                    % Action
+                  </span>
+                )}
+              </div>
+              {currentActionPlan.length > 0 && (
+                <p className="text-[10px] font-mono text-slate-400 truncate mt-0.5">
+                  {currentActionPlan
+                    .map(
+                      (act) =>
+                        `${act.type.toUpperCase()}${
+                          'direction' in act
+                            ? `(${act.direction}${'steps' in act ? ` × ${act.steps}` : ''})`
+                            : ''
+                        }`
+                    )
+                    .join(' → ')}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setModal('modalAIInspector', true)}
+            className="px-2.5 py-1.5 rounded-lg bg-purple-950/70 hover:bg-purple-900/80 border border-purple-500/40 text-purple-200 text-[10px] font-mono font-semibold flex items-center gap-1 shrink-0 transition"
+            title="Open AI Inspector"
+          >
+            <Cpu className="w-3.5 h-3.5 text-purple-300" />
+            <span>Inspect AI</span>
+          </button>
         </div>
 
         {/* Action Buttons */}

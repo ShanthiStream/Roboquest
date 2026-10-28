@@ -9,7 +9,7 @@ export const AIInspector: React.FC = () => {
   if (!modalAIInspector) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
       <div className="relative w-full max-w-3xl glass-panel-glow rounded-2xl flex flex-col max-h-[90vh] overflow-hidden border border-cyan-500/40 shadow-2xl">
         {/* Header */}
         <div className="px-6 py-4 border-b border-cyan-500/20 flex items-center justify-between bg-slate-900/60">
@@ -36,10 +36,10 @@ export const AIInspector: React.FC = () => {
         </div>
 
         {/* Tab switchers */}
-        <div className="flex items-center border-b border-cyan-500/20 px-6 bg-slate-950/40 text-xs font-semibold">
+        <div className="flex items-center overflow-x-auto no-scrollbar border-b border-cyan-500/20 px-4 sm:px-6 bg-slate-950/40 text-xs font-semibold shrink-0">
           <button
             onClick={() => setActiveTab('current')}
-            className={`py-2.5 px-4 border-b-2 flex items-center gap-1.5 transition ${
+            className={`py-2.5 px-3 sm:px-4 border-b-2 flex items-center gap-1.5 whitespace-nowrap shrink-0 transition ${
               activeTab === 'current'
                 ? 'border-cyan-400 text-cyan-300'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -50,7 +50,7 @@ export const AIInspector: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('educational')}
-            className={`py-2.5 px-4 border-b-2 flex items-center gap-1.5 transition ${
+            className={`py-2.5 px-3 sm:px-4 border-b-2 flex items-center gap-1.5 whitespace-nowrap shrink-0 transition ${
               activeTab === 'educational'
                 ? 'border-purple-400 text-purple-300'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -61,7 +61,7 @@ export const AIInspector: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`py-2.5 px-4 border-b-2 flex items-center gap-1.5 transition ${
+            className={`py-2.5 px-3 sm:px-4 border-b-2 flex items-center gap-1.5 whitespace-nowrap shrink-0 transition ${
               activeTab === 'history'
                 ? 'border-cyan-400 text-cyan-300'
                 : 'border-transparent text-slate-400 hover:text-slate-200'

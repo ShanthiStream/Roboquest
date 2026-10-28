@@ -73,15 +73,16 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpad
   ].slice(0, 4);
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-1.5 sm:py-2 flex flex-col gap-1.5 sm:gap-2">
+    <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 py-1.5 sm:py-2 flex flex-col gap-1.5 sm:gap-2">
       {/* Quick suggestions chips */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs text-slate-400 no-scrollbar touch-pan-x select-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs text-slate-400 no-scrollbar touch-pan-x select-none">
         <span className="font-semibold text-cyan-400 shrink-0 text-[11px] sm:text-xs">Try:</span>
         {suggestions.map((sug, i) => (
           <button
             key={i}
+            type="button"
             onClick={() => setInput(sug)}
-            className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700/60 hover:border-cyan-500/60 text-slate-300 hover:text-cyan-300 transition shrink-0 text-[11px] sm:text-xs active:scale-95"
+            className="min-h-[28px] px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700/60 hover:border-cyan-500/60 text-slate-300 hover:text-cyan-300 transition shrink-0 text-[11px] sm:text-xs active:scale-95"
           >
             "{sug}"
           </button>
@@ -90,13 +91,13 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpad
 
       {/* Main command bar form */}
       <form onSubmit={handleSubmit} className="flex items-center gap-1.5 sm:gap-2">
-        {/* Quick actions buttons: D-Pad, Undo, Restart, Hint */}
+        {/* Quick actions buttons: D-Pad (sm+), Undo, Restart, Hint */}
         <div className="flex items-center gap-1 shrink-0">
           {onToggleDpad && (
             <button
               type="button"
               onClick={onToggleDpad}
-              className={`p-2 sm:p-2.5 rounded-xl border transition shadow-sm flex items-center justify-center ${
+              className={`hidden sm:flex min-w-[40px] min-h-[40px] p-2 sm:p-2.5 rounded-xl border transition shadow-sm items-center justify-center ${
                 isDpadOpen
                   ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(0,240,255,0.4)]'
                   : 'bg-slate-900/90 border-slate-700/80 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/50'
@@ -110,7 +111,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpad
           <button
             type="button"
             onClick={undoAction}
-            className="p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-cyan-300 hover:border-cyan-500/60 transition shadow-sm active:scale-95"
+            className="min-w-[38px] min-h-[40px] sm:min-w-[40px] p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-cyan-300 hover:border-cyan-500/60 transition shadow-sm active:scale-95 flex items-center justify-center"
             title="Undo Last Step"
           >
             <Undo2 className="w-4 h-4" />
@@ -119,7 +120,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpad
           <button
             type="button"
             onClick={restartLevel}
-            className="p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-amber-300 hover:border-amber-500/60 transition shadow-sm active:scale-95"
+            className="min-w-[38px] min-h-[40px] sm:min-w-[40px] p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-amber-300 hover:border-amber-500/60 transition shadow-sm active:scale-95 flex items-center justify-center"
             title="Restart Level"
           >
             <RotateCcw className="w-4 h-4" />
@@ -128,7 +129,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpad
           <button
             type="button"
             onClick={nextHint}
-            className="p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 transition shadow-sm active:scale-95"
+            className="min-w-[38px] min-h-[40px] sm:min-w-[40px] p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 transition shadow-sm active:scale-95 flex items-center justify-center"
             title="Get Progressive Hint"
           >
             <Lightbulb className="w-4 h-4" />
@@ -150,7 +151,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpad
                 ? 'Executing actions...'
                 : 'Say or type: "Move forward 3", "Push right"...'
             }
-            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-slate-900/90 border text-xs sm:text-sm md:text-base font-mono outline-none transition shadow-inner truncate ${
+            className={`w-full min-h-[40px] px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-900/90 border text-xs sm:text-sm md:text-base font-mono outline-none transition shadow-inner truncate ${
               isListeningVoice
                 ? 'border-red-500/80 ring-2 ring-red-500/30 text-red-300'
                 : 'border-cyan-500/30 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 text-slate-100 placeholder-slate-500'
@@ -162,7 +163,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpad
         <button
           type="button"
           onClick={toggleVoiceListening}
-          className={`p-2.5 sm:p-3 rounded-xl border transition shadow-lg flex items-center justify-center shrink-0 active:scale-95 ${
+          className={`min-w-[40px] min-h-[40px] p-2.5 sm:p-3 rounded-xl border transition shadow-lg flex items-center justify-center shrink-0 active:scale-95 ${
             isListeningVoice
               ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]'
               : 'bg-slate-900/90 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400'
@@ -176,7 +177,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onToggleDpad, isDpad
         <button
           type="submit"
           disabled={!input.trim() || isExecutingCommand || snapshot.status !== 'playing'}
-          className="px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl neon-button font-orbitron font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shadow-md shrink-0 active:scale-95"
+          className="min-h-[40px] px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl neon-button font-orbitron font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shadow-md shrink-0 active:scale-95"
           title="Execute Command"
         >
           <span className="hidden sm:inline">EXECUTE</span>

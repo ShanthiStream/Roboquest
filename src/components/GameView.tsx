@@ -141,34 +141,103 @@ export const GameView: React.FC = () => {
 
   return (
     <div className="relative flex-1 w-full flex flex-col justify-between overflow-hidden">
-      {/* Top HUD: Level Title, Objectives, Energy Bar, Inventory Keys */}
+      {/* Top HUD: Level Title, Objectives, Viewport Dock (Left) | Status (Center) | Energy & AI Details (Right) */}
       <div className="absolute top-2 sm:top-3 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-start justify-between gap-2 pointer-events-none">
-        {/* Left: Level Info */}
-        <div className="glass-panel px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl pointer-events-auto flex items-center gap-2 sm:gap-3 shadow-lg max-w-[200px] sm:max-w-none">
-          <div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 flex-shrink-0">
-                Lvl {currentLevel.id}
-              </span>
-              <h2 className="font-orbitron font-bold text-xs sm:text-base text-slate-100 truncate">
-                {currentLevel.title}
-              </h2>
+        {/* Left Column: Level Info + Viewport & Control Dock + Mobile AI Plan Pill */}
+        <div className="flex flex-col gap-2 items-start pointer-events-none min-w-0 max-w-[60%] sm:max-w-none">
+          <div className="glass-panel px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl pointer-events-auto flex items-center gap-2 sm:gap-3 shadow-lg max-w-full">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 flex-shrink-0">
+                  Lvl {currentLevel.id}
+                </span>
+                <h2 className="font-orbitron font-bold text-xs sm:text-base text-slate-100 truncate">
+                  {currentLevel.title}
+                </h2>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5 max-w-sm hidden md:block">
+                {currentLevel.description}
+              </p>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5 max-w-sm hidden md:block">
-              {currentLevel.description}
-            </p>
+          </div>
+
+          {/* Left Dock: Viewport Zoom/Fit & D-Pad Controls + Mobile/Tablet AI Plan Pill (Never overlaps Right AI Box) */}
+          <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+            <div className="flex items-center gap-1 p-1 rounded-xl glass-panel shadow-lg border border-slate-700/60">
+              <button
+                onClick={handleZoomIn}
+                className="w-8 h-8 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-cyan-300 hover:bg-slate-800/80 active:scale-95 transition"
+                title="Zoom In"
+                aria-label="Zoom In"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleZoomOut}
+                className="w-8 h-8 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-cyan-300 hover:bg-slate-800/80 active:scale-95 transition"
+                title="Zoom Out"
+                aria-label="Zoom Out"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleResetView}
+                className="w-8 h-8 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-cyan-300 hover:bg-slate-800/80 active:scale-95 transition"
+                title="Reset View / Auto-Fit"
+                aria-label="Reset View"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+              <div className="w-px h-4 bg-slate-700/80 mx-0.5" />
+              <button
+                onClick={() => setShowDpad((prev) => !prev)}
+                className={`w-8 h-8 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center active:scale-95 transition ${
+                  showDpad
+                    ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(0,240,255,0.35)]'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
+                }`}
+                title={showDpad ? 'Hide Virtual Controls' : 'Show Virtual Controls'}
+                aria-label="Toggle Virtual Controls"
+              >
+                <Gamepad2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Mobile & Tablet Floating AI Confidence & Plan Pill (Always accessible) */}
+            <button
+              onClick={() => {
+                if (currentActionPlan.length > 0) {
+                  setShowMobilePlanDrawer(true);
+                } else {
+                  setModal('modalAIInspector', true);
+                }
+              }}
+              className="lg:hidden glass-panel-glow px-2.5 py-1.5 rounded-xl border border-cyan-400/50 flex items-center gap-1.5 text-xs font-mono text-cyan-300 shadow-lg active:scale-95 transition"
+              title="View AI Confidence & Action Plan"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse flex-shrink-0" />
+              <span>
+                {currentActionPlan.length > 0 ? `AI Plan (${currentActionPlan.length})` : 'AI Confidence'}
+              </span>
+              {overallConfidence !== null && (
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${getConfidenceBadge(overallConfidence).bg}`}>
+                  {Math.round(overallConfidence * 100)}%
+                </span>
+              )}
+              <ChevronDown className="w-3 h-3 text-slate-400 flex-shrink-0" />
+            </button>
           </div>
         </div>
 
         {/* Center: Robot Contextual Status Bubble (hidden on small phones to save space) */}
-        <div className="hidden sm:flex glass-panel px-3 py-1.5 rounded-xl pointer-events-auto items-center gap-1.5 max-w-[200px] md:max-w-md shadow-lg border-cyan-500/30">
+        <div className="hidden md:flex glass-panel px-3 py-1.5 rounded-xl pointer-events-auto items-center gap-1.5 max-w-[220px] lg:max-w-md shadow-lg border-cyan-500/30">
           <span className="text-sm md:text-base">🤖</span>
           <span className="text-[11px] md:text-xs font-mono text-cyan-200 truncate">
             "{snapshot.lastMessage}"
           </span>
         </div>
 
-        {/* Right Column: Stacked Energy Box & AI Confidence Box */}
+        {/* Right Column: Stacked Energy Box & AI Confidence Box (Unobstructed) */}
         <div className="flex flex-col gap-2 pointer-events-none items-end flex-shrink-0">
           {/* Box 1: Energy Meter & Inventory */}
           <div className="glass-panel px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl pointer-events-auto flex items-center justify-between gap-2 sm:gap-3 shadow-lg border border-slate-700/60 backdrop-blur-md">
@@ -217,18 +286,38 @@ export const GameView: React.FC = () => {
             </div>
           </div>
 
-          {/* Box 2: Desktop AI Confidence & Action Plan Box (Hidden on < lg screens to avoid covering canvas) */}
-          {currentActionPlan.length > 0 && !hudDismissed && (
-            <div className="hidden lg:block w-72 sm:w-80">
+          {/* Restore AI Plan pill if dismissed on Desktop */}
+          {hudDismissed && (
+            <button
+              onClick={() => {
+                setHudDismissed(false);
+                setHudMinimized(false);
+              }}
+              className="hidden lg:flex glass-panel-glow pointer-events-auto px-3 py-1.5 rounded-xl border border-cyan-500/40 items-center gap-1.5 text-xs font-mono text-cyan-300 hover:border-cyan-400 transition shadow-lg"
+              title="Restore AI Confidence & Action Plan"
+            >
+              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{currentActionPlan.length > 0 ? `AI Plan (${currentActionPlan.length})` : 'AI Confidence'}</span>
+              {overallConfidence !== null && (
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${getConfidenceBadge(overallConfidence).bg}`}>
+                  {Math.round(overallConfidence * 100)}%
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Box 2: Desktop AI Confidence & Action Plan Box (Always visible unless dismissed; reserves bottom space when D-Pad is open) */}
+          {!hudDismissed && (
+            <div className="hidden lg:block w-72 xl:w-80">
               {hudMinimized ? (
                 <div className="glass-panel-glow pointer-events-auto w-full p-2.5 rounded-2xl border border-cyan-500/40 shadow-xl backdrop-blur-xl bg-slate-950/92 flex items-center justify-between gap-2 transition-all">
                   <div className="flex items-center gap-2 truncate">
                     <Sparkles className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
                     <span className="text-xs font-orbitron font-bold text-slate-100 truncate">
-                      AI Plan ({currentActionPlan.length})
+                      {currentActionPlan.length > 0 ? `AI Plan (${currentActionPlan.length})` : 'AI Confidence'}
                     </span>
                     {overallConfidence !== null && (
-                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border ${getConfidenceBadge(overallConfidence).bg}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${getConfidenceBadge(overallConfidence).bg}`}>
                         {Math.round(overallConfidence * 100)}%
                       </span>
                     )}
@@ -240,7 +329,7 @@ export const GameView: React.FC = () => {
                     <button
                       onClick={() => setHudMinimized(false)}
                       className="p-1 rounded text-slate-400 hover:text-cyan-300 transition"
-                      title="Expand Action List"
+                      title="Expand AI Confidence Panel"
                     >
                       <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
@@ -254,7 +343,11 @@ export const GameView: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="glass-panel-glow pointer-events-auto w-full rounded-2xl border border-cyan-500/40 shadow-2xl backdrop-blur-xl bg-slate-950/92 p-3 sm:p-3.5 flex flex-col max-h-[calc(100vh-210px)] transition-all">
+                <div
+                  className={`glass-panel-glow pointer-events-auto w-full rounded-2xl border border-cyan-500/40 shadow-2xl backdrop-blur-xl bg-slate-950/92 p-3 sm:p-3.5 flex flex-col transition-all ${
+                    showDpad ? 'max-h-[calc(100dvh-390px)]' : 'max-h-[calc(100dvh-230px)]'
+                  }`}
+                >
                   {/* Header row */}
                   <div className="flex items-center justify-between gap-1.5 pb-2 mb-2 border-b border-slate-800/80 flex-shrink-0">
                     <div className="flex items-center gap-1.5 truncate">
@@ -263,8 +356,8 @@ export const GameView: React.FC = () => {
                         <span className="text-xs font-orbitron font-bold text-slate-100 tracking-wider block truncate">
                           AI CONFIDENCE
                         </span>
-                        <span className="text-[9px] text-cyan-300 font-mono">
-                          Cactus Needle WASM
+                        <span className="text-[9px] text-cyan-300 font-mono block truncate">
+                          {inspectorData.adapterName || 'Cactus Needle WASM'}
                         </span>
                       </div>
                     </div>
@@ -272,7 +365,7 @@ export const GameView: React.FC = () => {
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {overallConfidence !== null && (
                         <span
-                          className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border ${getConfidenceBadge(overallConfidence).bg}`}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${getConfidenceBadge(overallConfidence).bg}`}
                           title="Overall Calibrated Model Confidence"
                         >
                           {Math.round(overallConfidence * 100)}%
@@ -305,73 +398,92 @@ export const GameView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Vertical Stack of Action Cards with individual confidence pills */}
-                  <div className="flex flex-col gap-2 overflow-y-auto pr-1 scrollbar-thin max-h-[280px]">
-                    {currentActionPlan.map((action, idx) => {
-                      const isDone = idx < activeActionIndex;
-                      const isActive = isExecutingCommand && idx === activeActionIndex;
-                      const details = getActionDetails(action);
-                      const badge = getConfidenceBadge(action.confidence ?? overallConfidence ?? undefined);
+                  {/* Vertical Stack of Action Cards with individual confidence pills, or Ready status */}
+                  {currentActionPlan.length > 0 ? (
+                    <div
+                      className={`flex flex-col gap-2 overflow-y-auto pr-1 scrollbar-thin ${
+                        showDpad ? 'max-h-[150px]' : 'max-h-[260px]'
+                      }`}
+                    >
+                      {currentActionPlan.map((action, idx) => {
+                        const isDone = !isExecutingCommand || idx < activeActionIndex;
+                        const isActive = isExecutingCommand && idx === activeActionIndex;
+                        const details = getActionDetails(action);
+                        const badge = getConfidenceBadge(action.confidence ?? overallConfidence ?? undefined);
 
-                      let cardBorder = 'border-slate-800 bg-slate-900/90';
-                      if (isActive) {
-                        cardBorder = 'border-cyan-400 bg-cyan-950/60 shadow-[0_0_12px_rgba(0,240,255,0.3)] ring-1 ring-cyan-400/80 animate-pulse';
-                      } else if (isDone) {
-                        cardBorder = 'border-slate-800/60 bg-slate-950/60 opacity-60';
-                      }
+                        let cardBorder = 'border-slate-800 bg-slate-900/90';
+                        if (isActive) {
+                          cardBorder = 'border-cyan-400 bg-cyan-950/60 shadow-[0_0_12px_rgba(0,240,255,0.3)] ring-1 ring-cyan-400/80 animate-pulse';
+                        } else if (isDone) {
+                          cardBorder = 'border-slate-800/80 bg-slate-900/80';
+                        }
 
-                      return (
-                        <div
-                          key={idx}
-                          className={`p-2 sm:p-2.5 rounded-xl border ${cardBorder} flex flex-col justify-between transition-all`}
-                        >
-                          {/* Top: Step Index & Status */}
-                          <div className="flex items-center justify-between gap-1 text-[10px] font-mono mb-1">
-                            <span className="text-slate-400 font-bold">Step #{idx + 1}</span>
-                            {isDone ? (
-                              <span className="text-emerald-400 font-bold flex items-center gap-0.5">
-                                <CheckCircle2 className="w-3 h-3" /> Done
+                        return (
+                          <div
+                            key={idx}
+                            className={`p-2 sm:p-2.5 rounded-xl border ${cardBorder} flex flex-col justify-between transition-all`}
+                          >
+                            {/* Top: Step Index & Status */}
+                            <div className="flex items-center justify-between gap-1 text-[10px] font-mono mb-1">
+                              <span className="text-slate-400 font-bold">Step #{idx + 1}</span>
+                              {isDone ? (
+                                <span className="text-emerald-400 font-bold flex items-center gap-0.5">
+                                  <CheckCircle2 className="w-3 h-3" /> Done
+                                </span>
+                              ) : isActive ? (
+                                <span className="text-cyan-300 font-bold flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" /> Active
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">Queued</span>
+                              )}
+                            </div>
+
+                            {/* Mid: Action Name & Params */}
+                            <div className="flex items-center justify-between gap-2 my-0.5">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-cyan-400 font-bold text-xs">{details.icon}</span>
+                                <span className="text-slate-100 font-bold text-xs truncate">
+                                  {details.name}
+                                </span>
+                              </div>
+                              {details.param && (
+                                <span className="text-[10px] text-slate-400 font-mono truncate">
+                                  {details.param}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Bottom: Action AI Confidence Score Pill */}
+                            <div className="flex items-center justify-between gap-1 pt-1.5 mt-1 border-t border-slate-800/80">
+                              <span className="text-[9px] uppercase tracking-wider text-slate-400 font-sans">
+                                Action Confidence
                               </span>
-                            ) : isActive ? (
-                              <span className="text-cyan-300 font-bold flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" /> Active
-                              </span>
-                            ) : (
-                              <span className="text-slate-500">Queued</span>
-                            )}
-                          </div>
-
-                          {/* Mid: Action Name & Params */}
-                          <div className="flex items-center justify-between gap-2 my-0.5">
-                            <div className="flex items-center gap-1.5 truncate">
-                              <span className="text-cyan-400 font-bold text-xs">{details.icon}</span>
-                              <span className="text-slate-100 font-bold text-xs truncate">
-                                {details.name}
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${badge.bg}`}
+                                title={`Action Confidence Score: ${badge.pct}`}
+                              >
+                                {badge.pct}
                               </span>
                             </div>
-                            {details.param && (
-                              <span className="text-[10px] text-slate-400 font-mono truncate">
-                                {details.param}
-                              </span>
-                            )}
                           </div>
-
-                          {/* Bottom: Action AI Confidence Score Pill */}
-                          <div className="flex items-center justify-between gap-1 pt-1.5 mt-1 border-t border-slate-800/80">
-                            <span className="text-[9px] uppercase tracking-wider text-slate-400 font-sans">
-                              Confidence
-                            </span>
-                            <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${badge.bg}`}
-                              title={`AI Confidence Score: ${badge.pct}`}
-                            >
-                              {badge.pct}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Agent Status</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Ready
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                        Enter or speak a command below to view step-by-step action confidence scores.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Bottom launcher for AI Inspector */}
                   <div className="pt-2 mt-2 border-t border-slate-800/80 flex items-center justify-between flex-shrink-0">
@@ -390,63 +502,9 @@ export const GameView: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile & Tablet Floating AI Plan Pill */}
-      {currentActionPlan.length > 0 && (
-        <div className="lg:hidden absolute top-14 sm:top-16 left-2 sm:left-4 z-20 pointer-events-auto">
-          <button
-            onClick={() => setShowMobilePlanDrawer(true)}
-            className="glass-panel-glow px-2.5 py-1.5 rounded-full border border-cyan-400/50 flex items-center gap-1.5 text-xs font-mono text-cyan-300 shadow-lg active:scale-95 transition"
-            title="View AI Action Plan"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse flex-shrink-0" />
-            <span>AI Plan ({currentActionPlan.length})</span>
-            {overallConfidence !== null && (
-              <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border ${getConfidenceBadge(overallConfidence).bg}`}>
-                {Math.round(overallConfidence * 100)}%
-              </span>
-            )}
-            <ChevronDown className="w-3 h-3 text-slate-400 flex-shrink-0" />
-          </button>
-        </div>
-      )}
-
-      {/* Floating Canvas Viewport Controls */}
-      <div className="absolute top-14 right-2 sm:top-16 sm:right-4 z-20 flex flex-col gap-1.5 pointer-events-auto">
-        <button
-          onClick={handleZoomIn}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-panel flex items-center justify-center text-slate-300 hover:text-cyan-300 hover:border-cyan-400 active:scale-95 transition shadow-lg"
-          title="Zoom In"
-        >
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleZoomOut}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-panel flex items-center justify-center text-slate-300 hover:text-cyan-300 hover:border-cyan-400 active:scale-95 transition shadow-lg"
-          title="Zoom Out"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleResetView}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-panel flex items-center justify-center text-slate-300 hover:text-cyan-300 hover:border-cyan-400 active:scale-95 transition shadow-lg"
-          title="Reset View / Auto-Fit"
-        >
-          <Maximize2 className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => setShowDpad((prev) => !prev)}
-          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-panel flex items-center justify-center active:scale-95 transition shadow-lg ${
-            showDpad ? 'border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-slate-400 hover:text-slate-200'
-          }`}
-          title={showDpad ? 'Hide Virtual D-Pad' : 'Show Virtual D-Pad'}
-        >
-          <Gamepad2 className="w-4 h-4" />
-        </button>
-      </div>
-
       {/* Action Execution Progress overlay if busy */}
       {isExecutingCommand && totalActionSteps > 0 && (
-        <div className="absolute top-24 sm:top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+        <div className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
           <div className="glass-panel px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border border-cyan-400/50 text-xs font-mono text-cyan-300 flex items-center gap-2 shadow-[0_0_15px_rgba(0,240,255,0.4)] animate-pulse">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             <span>
@@ -457,13 +515,13 @@ export const GameView: React.FC = () => {
       )}
 
       {/* Main Interactive Canvas Area */}
-      <div className="relative w-full flex-1 min-h-0 flex items-center justify-center bg-cyber-900 overflow-hidden">
+      <div className="relative w-full flex-1 min-h-0 bg-cyber-900 overflow-hidden">
         <canvas
           ref={canvasRef}
           className="w-full h-full block cursor-grab active:cursor-grabbing touch-none"
         />
 
-        {/* Touch D-Pad Controls for Mobile & iPad */}
+        {/* Touch D-Pad Controls Overlay for Mobile, iPad & Desktop */}
         {showDpad && (
           <TouchControls onClose={() => setShowDpad(false)} />
         )}
@@ -497,7 +555,7 @@ export const GameView: React.FC = () => {
             {/* List of cards */}
             <div className="flex flex-col gap-2 overflow-y-auto py-3 scrollbar-thin flex-1">
               {currentActionPlan.map((action, idx) => {
-                const isDone = idx < activeActionIndex;
+                const isDone = !isExecutingCommand || idx < activeActionIndex;
                 const isActive = isExecutingCommand && idx === activeActionIndex;
                 const details = getActionDetails(action);
                 const badge = getConfidenceBadge(action.confidence ?? overallConfidence ?? undefined);
@@ -509,7 +567,7 @@ export const GameView: React.FC = () => {
                       isActive
                         ? 'border-cyan-400 bg-cyan-950/60 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
                         : isDone
-                        ? 'border-slate-800/60 bg-slate-950/60 opacity-60'
+                        ? 'border-slate-800/80 bg-slate-900/80'
                         : 'border-slate-800 bg-slate-900/90'
                     }`}
                   >
@@ -534,8 +592,8 @@ export const GameView: React.FC = () => {
                       {details.param && <span className="text-xs text-slate-400 font-mono">{details.param}</span>}
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/60">
-                      <span>Confidence</span>
-                      <span className={`px-1.5 py-0.2 rounded font-mono font-bold border ${badge.bg}`}>{badge.pct}</span>
+                      <span>Action Confidence</span>
+                      <span className={`px-1.5 py-0.5 rounded font-mono font-bold border ${badge.bg}`}>{badge.pct}</span>
                     </div>
                   </div>
                 );

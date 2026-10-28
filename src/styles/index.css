@@ -42,6 +42,22 @@ body {
   background: #00f0ff;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
 /* Glassmorphism utility */
 .glass-panel {
   background: rgba(13, 21, 39, 0.75);

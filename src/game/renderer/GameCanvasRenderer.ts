@@ -205,9 +205,9 @@ export class GameCanvasRenderer {
     const mapW = cols * this.tileSize;
     const mapH = rows * this.tileSize;
 
-    // Responsive padding
-    const padX = viewW < 500 ? 16 : 40;
-    const padY = viewH < 500 ? 16 : 40;
+    // Responsive padding accounting for Top HUD overlay safe area
+    const padX = viewW < 500 ? 24 : 64;
+    const padY = viewH < 500 ? 84 : 116;
 
     const scaleX = (viewW - padX) / Math.max(1, mapW);
     const scaleY = (viewH - padY) / Math.max(1, mapH);
@@ -368,12 +368,13 @@ export class GameCanvasRenderer {
     let targetCamX = this.robotCurrentX * this.tileSize + this.tileSize / 2 - viewW / 2;
     let targetCamY = this.robotCurrentY * this.tileSize + this.tileSize / 2 - viewH / 2;
 
-    // If map fits inside view dimensions, center the entire puzzle nicely
+    // If map fits inside view dimensions, center the entire puzzle nicely below Top HUD
+    const hudOffsetY = ((this.canvas.height / dpr) < 500 ? 20 : 28) / this.zoom;
     if (mapW <= viewW) {
       targetCamX = mapW / 2 - viewW / 2;
     }
     if (mapH <= viewH) {
-      targetCamY = mapH / 2 - viewH / 2;
+      targetCamY = mapH / 2 - viewH / 2 - hudOffsetY;
     }
 
     // Include user drag pan offset

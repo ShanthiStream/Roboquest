@@ -141,6 +141,7 @@ export class GameEngine {
       exitPosition: { x: exit.x, y: exit.y },
       levelTitle: this.level.title,
       objectives: [this.level.description],
+      tiles: this.tiles.map(row => [...row]),
     };
   }
 
@@ -232,6 +233,9 @@ export class GameEngine {
         const item = this.entities.find(e => e.id === action.targetId || (e.x === this.robot.x && e.y === this.robot.y));
         if (item && item.x === this.robot.x && item.y === this.robot.y) {
           this.collectItem(item);
+        } else if (action.targetId && !this.entities.some(e => e.id === action.targetId)) {
+          // Item was already auto-collected upon stepping onto its tile
+          sound.playCollect();
         } else {
           this.lastMessage = 'No item in reach to collect.';
         }

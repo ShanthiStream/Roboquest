@@ -220,7 +220,7 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
         else if (pushDir === 'down') approachY -= 1;
         else if (pushDir === 'up') approachY += 1;
 
-        const path = this.simplePathTo(context.robot.x, context.robot.y, approachX, approachY);
+        const path = this.simplePathTo(context.robot.x, context.robot.y, approachX, approachY, context);
         for (const step of this.groupPathSteps(path)) {
           actions.push(step);
         }
@@ -238,9 +238,9 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
       const targetEntity = this.findMatchingEntity(clause, context);
       if (targetEntity) {
         // Pathfind or direct collect if adjacent
-        const path = this.simplePathTo(context.robot.x, context.robot.y, targetEntity.x, targetEntity.y);
-        for (const step of path) {
-          actions.push({ type: 'move', direction: step, steps: 1 });
+        const path = this.simplePathTo(context.robot.x, context.robot.y, targetEntity.x, targetEntity.y, context);
+        for (const step of this.groupPathSteps(path)) {
+          actions.push(step);
         }
         actions.push({ type: 'collect', targetId: targetEntity.id });
         return actions;
@@ -256,9 +256,9 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
     if (clause.includes('interact') || clause.includes('unlock') || clause.includes('open') || clause.includes('flip') || clause.includes('press') || clause.includes('activate')) {
       const targetEntity = this.findMatchingEntity(clause, context);
       if (targetEntity) {
-        const path = this.simplePathTo(context.robot.x, context.robot.y, targetEntity.x, targetEntity.y);
-        for (const step of path) {
-          actions.push({ type: 'move', direction: step, steps: 1 });
+        const path = this.simplePathTo(context.robot.x, context.robot.y, targetEntity.x, targetEntity.y, context);
+        for (const step of this.groupPathSteps(path)) {
+          actions.push(step);
         }
         actions.push({ type: 'interact', targetId: targetEntity.id });
         return actions;
@@ -276,7 +276,7 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
 
     // Check Navigation: "go to the exit / portal / goal"
     if (clause.includes('exit') || clause.includes('portal') || clause.includes('goal') || clause.includes('finish') || clause.includes('escape')) {
-      const path = this.simplePathTo(context.robot.x, context.robot.y, context.exitPosition.x, context.exitPosition.y);
+      const path = this.simplePathTo(context.robot.x, context.robot.y, context.exitPosition.x, context.exitPosition.y, context);
       if (path.length > 0) {
         // Group consecutive steps in same direction
         return this.groupPathSteps(path);
@@ -287,7 +287,7 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
     if (clause.includes('go to') || clause.includes('walk to') || clause.includes('head to') || clause.includes('reach')) {
       const targetEntity = this.findMatchingEntity(clause, context);
       if (targetEntity) {
-        const path = this.simplePathTo(context.robot.x, context.robot.y, targetEntity.x, targetEntity.y);
+        const path = this.simplePathTo(context.robot.x, context.robot.y, targetEntity.x, targetEntity.y, context);
         if (path.length > 0) {
           return this.groupPathSteps(path);
         }
@@ -351,12 +351,65 @@ export class RuleBasedFallbackAdapter implements AICommandAdapter {
     return null;
   }
 
-  private simplePathTo(fromX: number, fromY: number, toX: number, toY: number): Direction[] {
+  private simplePathTo(fromX: number, fromY: number, toX: number, toY: number, context?: GameContext): Direction[] {
+    if (fromX === toX && fromY === toY) return [];
+
+    // If grid tiles are available in context, try BFS obstacle-aware shortest path first
+    if (context?.tiles && context.tiles.length > 0) {
+      const height = context.tiles.length;
+      const width = context.tiles[0].length;
+      const visited = new Set<string>([`${fromX},${fromY}`]);
+      const queue: Array<{ x: number; y: number; path: Direction[] }> = [
+        { x: fromX, y: fromY, path: [] },
+      ];
+
+      const dirOffsets: Array<{ dir: Direction; dx: number; dy: number }> = [
+        { dir: 'right', dx: 1, dy: 0 },
+        { dir: 'left', dx: -1, dy: 0 },
+        { dir: 'down', dx: 0, dy: 1 },
+        { dir: 'up', dx: 0, dy: -1 },
+      ];
+
+      while (queue.length > 0) {
+        const cur = queue.shift()!;
+        if (cur.x === toX && cur.y === toY) {
+          return cur.path;
+        }
+
+        for (const { dir, dx, dy } of dirOffsets) {
+          const nx = cur.x + dx;
+          const ny = cur.y + dy;
+          const key = `${nx},${ny}`;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height || visited.has(key)) continue;
+
+          const tile = context.tiles[ny]?.[nx];
+          if (tile === 'wall' || tile === 'hazard') continue;
+
+          const isDestination = nx === toX && ny === toY;
+          if (!isDestination) {
+            const blockedByEntity = context.entities.some(e => {
+              if (e.x !== nx || e.y !== ny) return false;
+              if (e.type === 'crate') return true;
+              if (e.type === 'door' && e.state !== 'open') {
+                const hasKey = e.color && context.robot.inventory.some(k => k.includes(e.color!));
+                return !hasKey;
+              }
+              return false;
+            });
+            if (blockedByEntity) continue;
+          }
+
+          visited.add(key);
+          queue.push({ x: nx, y: ny, path: [...cur.path, dir] });
+        }
+      }
+    }
+
     const steps: Direction[] = [];
     let curX = fromX;
     let curY = fromY;
 
-    // Direct Manhattan path for translation into actions
+    // Direct Manhattan path fallback for translation into actions
     while (curX < toX) { steps.push('right'); curX++; }
     while (curX > toX) { steps.push('left'); curX--; }
     while (curY < toY) { steps.push('down'); curY++; }

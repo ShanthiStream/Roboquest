@@ -36,6 +36,7 @@ export interface GameContext {
   exitPosition: { x: number; y: number };
   levelTitle: string;
   objectives: string[];
+  tiles?: string[][];
 }
 
 export interface CommandResult {

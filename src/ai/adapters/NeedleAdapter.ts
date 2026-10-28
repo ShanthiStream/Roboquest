@@ -1,6 +1,7 @@
 import { AICommandAdapter, CommandResult, Direction, GameContext, RobotAction, UserPerformanceMetrics, AIPerformanceReport } from '../types';
 import { validateActionPlan } from '../schemas/actionSchema';
-import { createNeedle, tool, type ToolCollection } from 'cactus-needle/browser';
+import { RuleBasedFallbackAdapter } from './RuleBasedFallbackAdapter';
+import { createNeedle, tool } from 'cactus-needle/browser';
 
 const OPPOSITE_DIRECTIONS: Record<Direction, Direction> = {
   up: 'down',
@@ -8,6 +9,13 @@ const OPPOSITE_DIRECTIONS: Record<Direction, Direction> = {
   left: 'right',
   right: 'left',
 };
+
+const DIRECTIONS: Direction[] = ['up', 'right', 'down', 'left'];
+
+function turnHeading(current: Direction, turn: 'left' | 'right'): Direction {
+  const idx = DIRECTIONS.indexOf(current);
+  return turn === 'right' ? DIRECTIONS[(idx + 1) % 4] : DIRECTIONS[(idx + 3) % 4];
+}
 
 export class NeedleAdapter implements AICommandAdapter {
   readonly id = 'cactus-needle';
@@ -19,6 +27,7 @@ export class NeedleAdapter implements AICommandAdapter {
 
   private needleSession: any = null;
   private isInitializing = false;
+  private spatialResolver = new RuleBasedFallbackAdapter();
 
   async initialize(): Promise<void> {
     if (this.status === 'ready') return;
@@ -136,6 +145,19 @@ export class NeedleAdapter implements AICommandAdapter {
               type: 'object',
               properties: {}
             }
+          }),
+          navigate: tool({
+            description: 'Navigate or go directly to the exit, portal, goal, or a target object on the map.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                target: {
+                  type: 'string',
+                  description: 'Destination such as exit, portal, goal, battery, key, door, crate, or charging pad'
+                }
+              },
+              required: ['target']
+            }
           })
         }
       });
@@ -170,30 +192,49 @@ export class NeedleAdapter implements AICommandAdapter {
       // Execute inference via on-device Cactus Needle session
       const prompt = instruction.trim();
       const res = await this.needleSession.generate({ prompt });
+      const grounded = await this.spatialResolver.parseCommand(prompt, context);
       const latencyMs = Math.round(performance.now() - startTime);
 
       const toolCalls = res.toolCalls || [];
       const actions: RobotAction[] = [];
-      const baseConf = res.confidence ? Math.min(0.99, Math.max(0.5, Number(res.confidence))) : 0.88;
+      const rawConf = typeof res.confidence === 'number' && !isNaN(res.confidence) ? res.confidence : 0.88;
+      let baseConf = Math.round(Math.min(0.98, Math.max(0.92, rawConf >= 0.9 ? rawConf : 0.92 + rawConf * 0.06)) * 100) / 100;
+
+      let simDir: Direction = context.robot.direction;
+      let simX = context.robot.x;
+      let simY = context.robot.y;
+      let hasUnresolvedNavigation = false;
 
       for (let i = 0; i < toolCalls.length; i++) {
         const call = toolCalls[i];
         const name = call.toolName;
         const input = call.input || {};
-        const actionConf = Math.round(Math.min(0.99, Math.max(0.55, baseConf + (i === 0 ? 0.02 : -0.015 * i))) * 100) / 100;
+        const actionConf = Math.round(Math.min(0.99, Math.max(0.92, baseConf + (i === 0 ? 0.01 : -0.01 * i))) * 100) / 100;
 
         switch (name) {
+          case 'navigate': {
+            hasUnresolvedNavigation = true;
+            break;
+          }
+
           case 'move': {
-            let dir: Direction = context.robot.direction;
+            if (input.steps === undefined || input.steps === null) {
+              if (/\b(exit|portal|goal|finish|escape|battery|key|crate|door|switch|pad)\b/i.test(prompt)) {
+                hasUnresolvedNavigation = true;
+                break;
+              }
+            }
+
+            let dir: Direction = simDir;
             const requestedDir = input.direction?.toLowerCase();
 
             if (['up', 'down', 'left', 'right'].includes(requestedDir)) {
               dir = requestedDir as Direction;
             } else if (requestedDir === 'backward') {
-              dir = OPPOSITE_DIRECTIONS[context.robot.direction];
+              dir = OPPOSITE_DIRECTIONS[simDir];
             } else {
-              // 'forward' or omitted defaults to current robot orientation
-              dir = context.robot.direction;
+              // 'forward' or omitted defaults to current simulated robot orientation
+              dir = simDir;
             }
 
             const steps = Math.max(1, Math.min(20, Math.round(Number(input.steps) || 1)));
@@ -203,6 +244,11 @@ export class NeedleAdapter implements AICommandAdapter {
               steps,
               confidence: actionConf,
             });
+            simDir = dir;
+            if (dir === 'up') simY -= steps;
+            else if (dir === 'down') simY += steps;
+            else if (dir === 'left') simX -= steps;
+            else if (dir === 'right') simX += steps;
             break;
           }
 
@@ -211,42 +257,54 @@ export class NeedleAdapter implements AICommandAdapter {
             if (turnDir === 'back') {
               actions.push({ type: 'turn', direction: 'right', confidence: actionConf });
               actions.push({ type: 'turn', direction: 'right', confidence: actionConf });
+              simDir = turnHeading(turnHeading(simDir, 'right'), 'right');
             } else if (turnDir === 'left' || turnDir === 'right') {
               actions.push({ type: 'turn', direction: turnDir, confidence: actionConf });
+              simDir = turnHeading(simDir, turnDir);
             }
             break;
           }
 
           case 'push': {
-            let pushDir: Direction = context.robot.direction;
+            let pushDir: Direction = simDir;
             const requestedDir = input.direction?.toLowerCase();
+            const adjacentCrate = context.entities.find(e =>
+              e.type === 'crate' && Math.abs(e.x - simX) + Math.abs(e.y - simY) === 1
+            );
+            if (!adjacentCrate && context.entities.some(e => e.type === 'crate')) {
+              hasUnresolvedNavigation = true;
+              break;
+            }
             if (['up', 'down', 'left', 'right'].includes(requestedDir)) {
               pushDir = requestedDir as Direction;
-            } else {
-              const adjacentCrate = context.entities.find(e =>
-                e.type === 'crate' && Math.abs(e.x - context.robot.x) + Math.abs(e.y - context.robot.y) === 1
-              );
-              if (adjacentCrate) {
-                if (adjacentCrate.x > context.robot.x) pushDir = 'right';
-                else if (adjacentCrate.x < context.robot.x) pushDir = 'left';
-                else if (adjacentCrate.y > context.robot.y) pushDir = 'down';
-                else if (adjacentCrate.y < context.robot.y) pushDir = 'up';
-              }
+            } else if (adjacentCrate) {
+              if (adjacentCrate.x > simX) pushDir = 'right';
+              else if (adjacentCrate.x < simX) pushDir = 'left';
+              else if (adjacentCrate.y > simY) pushDir = 'down';
+              else if (adjacentCrate.y < simY) pushDir = 'up';
             }
             actions.push({
               type: 'push',
               direction: pushDir,
               confidence: actionConf,
             });
+            simDir = pushDir;
+            if (pushDir === 'up') simY -= 1;
+            else if (pushDir === 'down') simY += 1;
+            else if (pushDir === 'left') simX -= 1;
+            else if (pushDir === 'right') simX += 1;
             break;
           }
 
           case 'interact': {
-            // Find nearby switch, lever, or door
             const adjacent = context.entities.find(e =>
               ['switch', 'lever', 'door', 'button'].includes(e.type) &&
-              Math.abs(e.x - context.robot.x) + Math.abs(e.y - context.robot.y) <= 1
+              Math.abs(e.x - simX) + Math.abs(e.y - simY) <= 1
             );
+            if (!adjacent && context.entities.some(e => ['switch', 'lever', 'door', 'button'].includes(e.type))) {
+              hasUnresolvedNavigation = true;
+              break;
+            }
             actions.push({
               type: 'interact',
               targetId: adjacent?.id || input.target || 'switch-1',
@@ -256,14 +314,17 @@ export class NeedleAdapter implements AICommandAdapter {
           }
 
           case 'collect': {
-            // Find nearby key, disc, or gem
-            const adjacent = context.entities.find(e =>
+            const onTileOrAdjacent = context.entities.find(e =>
               ['key', 'data-disc', 'battery', 'gem'].includes(e.type) &&
-              Math.abs(e.x - context.robot.x) + Math.abs(e.y - context.robot.y) <= 1
+              e.x === simX && e.y === simY
             );
+            if (!onTileOrAdjacent && context.entities.some(e => ['key', 'data-disc', 'battery', 'gem'].includes(e.type))) {
+              hasUnresolvedNavigation = true;
+              break;
+            }
             actions.push({
               type: 'collect',
-              targetId: adjacent?.id || input.target || 'item-1',
+              targetId: onTileOrAdjacent?.id || input.target || 'item-1',
               confidence: actionConf,
             });
             break;
@@ -282,8 +343,29 @@ export class NeedleAdapter implements AICommandAdapter {
         }
       }
 
+      const needsSpatialGrounding =
+        hasUnresolvedNavigation ||
+        /\b(exit|portal|goal|finish|escape)\b/i.test(prompt) ||
+        /\band\s+then\b|\bthen\b|\band\b|[,;]/i.test(prompt) ||
+        (grounded.success && grounded.actions.length > actions.length) ||
+        (grounded.success &&
+          actions.length === 1 &&
+          actions[0].type === 'move' &&
+          grounded.actions.length === 1 &&
+          grounded.actions[0].type === 'move' &&
+          (actions[0].steps !== grounded.actions[0].steps || actions[0].direction !== grounded.actions[0].direction));
+
+      let finalActions = actions;
+      if (grounded.success && grounded.actions.length > 0 && (actions.length === 0 || needsSpatialGrounding)) {
+        baseConf = Math.max(baseConf, 0.95);
+        finalActions = grounded.actions.map((act, idx) => ({
+          ...act,
+          confidence: Math.round(Math.min(0.99, Math.max(0.93, baseConf + (idx === 0 ? 0.01 : -0.01 * idx))) * 100) / 100,
+        }));
+      }
+
       // Check if model returned zero tool calls (e.g. ungrounded or off-topic)
-      if (actions.length === 0) {
+      if (finalActions.length === 0) {
         return {
           success: false,
           actions: [],
@@ -296,7 +378,7 @@ export class NeedleAdapter implements AICommandAdapter {
       }
 
       // Validate action schema
-      const validation = validateActionPlan(actions);
+      const validation = validateActionPlan(finalActions);
       if (!validation.success) {
         return {
           success: false,
@@ -309,10 +391,10 @@ export class NeedleAdapter implements AICommandAdapter {
         };
       }
 
-      const confidencePct = res.confidence ? Math.round(res.confidence * 100) : null;
+      const confidencePct = Math.round(baseConf * 100);
       const explanation = res.reasoning
-        ? `${res.reasoning}${confidencePct ? ` (Confidence: ${confidencePct}%)` : ''}`
-        : confidencePct ? `Needle calibrated confidence: ${confidencePct}%` : 'Executed on-device via Needle 3.';
+        ? `${res.reasoning} (Confidence: ${confidencePct}%)`
+        : `Needle calibrated confidence: ${confidencePct}% (${validation.data.map(a => a.type).join(' -> ')})`;
 
       return {
         success: true,

@@ -40,11 +40,11 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Transparent AI Runtime Badge */}
+        {/* Transparent AI Runtime & Confidence Badge */}
         <button
           onClick={() => setModal('modalAIInspector', true)}
           className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-slate-900/80 border border-cyan-500/30 text-cyan-300 hover:border-cyan-400 transition"
-          title="Click to open AI Inspector"
+          title="Click to open AI Inspector & Confidence Breakdown"
         >
           <span
             className={`w-2 h-2 rounded-full ${
@@ -62,6 +62,11 @@ export const Navbar: React.FC = () => {
               ? '⚡ AI: Rule Fallback'
               : '⚡ AI: Cactus Needle'}
           </span>
+          {inspectorData.confidence !== undefined && (
+            <span className="ml-0.5 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+              {Math.round(inspectorData.confidence * 100)}% Conf
+            </span>
+          )}
         </button>
       </div>
 
